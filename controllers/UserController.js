@@ -3,6 +3,7 @@ import { User } from "../models/models.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
+
 dotenvConfig();
 
 export const loginUser = async (req, res) => {
@@ -58,14 +59,14 @@ export const loginUser = async (req, res) => {
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax", //strict
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
     });
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax", //strict
       maxAge: 1000 * 60 * 60, // 1 dia
     });
 
@@ -84,6 +85,7 @@ export const loginUser = async (req, res) => {
 };
 
 export const registerUser = async (req, res) => {
+
   try {
     const first_name = req.body?.first_name;
     const last_name = req.body?.last_name;
