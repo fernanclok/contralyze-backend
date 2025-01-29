@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { sequelize } from "./connection.js";
@@ -8,12 +9,19 @@ import userRoutes from "./routes/UserRoutes.js";
 import clientRoutes from "./routes/ClientRoutes.js";
 import categoryRoutes from "./routes/CategoryRoutes.js";
 
+const corsOptions = {
+    origin: 'http://localhost:3000',
+    credentials: true,
+};
+
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
 const app = express();
 app.use (express.json());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Manejar preflight requests para todas las rutas
 app.use(cookieParser());
 
 app.use("/user", userRoutes);
