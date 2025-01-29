@@ -1,5 +1,5 @@
 import { config as dotenvConfig } from "dotenv";
-import { User } from "../models/models.js";
+import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
@@ -22,7 +22,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email }, paranoid: false });
 
     if (!user) {
       return res.status(404).json({
