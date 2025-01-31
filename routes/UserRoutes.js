@@ -1,13 +1,13 @@
 import express from "express";
 import validateToken from "../middlewares/ValidateToken.js";
-import { loginUser, registerUser, logoutUser, tryAuth, refreshAccessToken } from "../controllers/UserController.js";
+import { loginUser, registerUser, logoutUser, verifyAuth, refreshAccessToken } from "../controllers/UserController.js";
 
 const router = express.Router();
 
 router.post("/login", loginUser);
 router.post("/register", registerUser);
-router.post('/try-auth', validateToken , tryAuth);
+router.get("/verify-auth", validateToken , verifyAuth);
 router.post("/logout", logoutUser);
-router.post('/refresh-token', refreshAccessToken);
+router.post("/refresh-token", refreshAccessToken);
 
 export default router;

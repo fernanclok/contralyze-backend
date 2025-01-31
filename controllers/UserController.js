@@ -30,7 +30,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const validPassword = bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
       return res.status(401).json({
@@ -57,16 +57,16 @@ export const loginUser = async (req, res) => {
 
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
+      secure: process.env.NODE_ENV === "production", // true en producción
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
     });
-
+    
     res.cookie("access_token", accessToken, {
-      httpOnly: true,
+      httpOnly: true, 
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 1000 * 60 * 60, // 1 dia
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 1000 * 60 * 60 * 24, // 1 día
     });
 
     const { password: _, ...userWithoutPassword } = user.dataValues;
@@ -142,10 +142,10 @@ export const logoutUser = (req, res) => {
   });
 };
 
-export const tryAuth = (req, res) => {
+export const verifyAuth = (req, res) => {
   res.status(200).json({
-    message: "this is a protected route",
-    user: req.user,
+    message: "User is authenticated",
+    role: req.user.role,
   });
 };
 
@@ -182,8 +182,8 @@ export const refreshAccessToken = async (req, res) => {
       // Enviar el nuevo access token
       res.cookie("access_token", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        secure: "none",
+        sameSite: "None",
         maxAge: 1000 * 60 * 60, // 1 dia
       });
 

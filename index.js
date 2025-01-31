@@ -19,10 +19,11 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 
 const app = express();
-app.use (express.json());
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Manejar preflight requests para todas las rutas
+
 app.use(cookieParser());
+app.use(express.json());
+app.use(cors(corsOptions)); 
+app.options("*", cors(corsOptions));
 
 app.use("/user", userRoutes);
 app.use("/client", clientRoutes);
