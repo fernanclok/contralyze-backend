@@ -34,4 +34,10 @@ class ClientController extends Controller
 
         return response()->json($clients);
     }
+    public function allClientsbyUser($id)
+    {
+        $clients = Client::where('created_by', $id)->get();
+
+        return response()->json($clients);
+    }
 }

@@ -38,5 +38,5 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
 Route::prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
-    // Route::get('/all/{id}', [ClientController::class, 'allClients']);
+    Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
 });
