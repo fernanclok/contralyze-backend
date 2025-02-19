@@ -70,8 +70,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-            auth()->logout();
-            return response()->json(['message' => 'User logged out and token invalidated'], 200);
+        \Log::info('Headers:', $request->headers->all()); // Ver los headers en logs
+        auth()->logout();
+        return response()->json(['message' => 'User logged out and token invalidated'], 200);
     }
 
     public function me()
