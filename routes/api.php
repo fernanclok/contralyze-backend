@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\ClientController;
 
 /*
@@ -32,9 +33,14 @@ Route::prefix('auth')->group(function () {
 
 Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
 
+//user routes
+Route::prefix('users')->group(function () {
+    Route::post('/create', [UserController::class, 'createUser']);
+    Route::get('/all', [UserController::class, 'allUsers']);
+})->middleware('jwt.auth');
+
 //client routes
 Route::prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
 });
-
