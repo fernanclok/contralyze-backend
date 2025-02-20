@@ -19,6 +19,8 @@ use App\Http\Controllers\ClientController;
 |
 */
 
+
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -27,8 +29,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/logout', [AuthController::class, 'logout']);
-    Route::get('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
 });
 
 Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
@@ -43,4 +45,7 @@ Route::prefix('users')->group(function () {
 Route::prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
+    Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
+    Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
+    Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
 });
