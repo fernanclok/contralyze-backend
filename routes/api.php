@@ -39,4 +39,6 @@ Route::prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
     Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
+    Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
+    Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
 });
