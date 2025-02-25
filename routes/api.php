@@ -38,3 +38,56 @@ Route::prefix('clients')->group(function () {
     Route::get('/all', [ClientController::class, 'allClients']);
 });
 
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\BudgetRequestController;
+
+// Budget Routes
+Route::prefix('budgets')->group(function () {
+    // List all budgets for a user
+    Route::get('/user/{user_id}', [BudgetController::class, 'index']);
+    
+    // Get a specific budget
+    Route::get('/{id}', [BudgetController::class, 'show']);
+    
+    // Create a new budget
+    Route::post('/create', [BudgetController::class, 'store']);
+    
+    // Update a budget
+    Route::put('/{id}', [BudgetController::class, 'update']);
+    
+    // Delete a budget
+    Route::delete('/{id}', [BudgetController::class, 'destroy']);
+    
+    // Get budget statistics
+    Route::get('/statistics/{user_id}', [BudgetController::class, 'getStatistics']);
+    
+    // Get budgets by category
+    Route::get('/category/{category_id}', [BudgetController::class, 'getByCategory']);
+});
+
+// Budget Request Routes
+Route::prefix('budget-requests')->group(function () {
+    // List all budget requests for a user
+    Route::get('/user/{user_id}', [BudgetRequestController::class, 'index']);
+    
+    // Get a specific budget request
+    Route::get('/{id}', [BudgetRequestController::class, 'show']);
+    
+    // Create a new budget request
+    Route::post('/create', [BudgetRequestController::class, 'store']);
+    
+    // Update a budget request
+    Route::put('/{id}', [BudgetRequestController::class, 'update']);
+    
+    // Delete a budget request
+    Route::delete('/{id}', [BudgetRequestController::class, 'destroy']);
+    
+    // Approve a budget request
+    Route::put('/{id}/approve', [BudgetRequestController::class, 'approve']);
+    
+    // Reject a budget request
+    Route::put('/{id}/reject', [BudgetRequestController::class, 'reject']);
+    
+    // Get pending requests
+    Route::get('/pending/{user_id}', [BudgetRequestController::class, 'getPendingRequests']);
+});
