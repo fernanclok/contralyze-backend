@@ -12,6 +12,7 @@ class ClientController extends Controller
     {
         $this->middleware('jwt.auth');
     }
+    
     public function createClient(Request $request)
     {
         $client = new Client();

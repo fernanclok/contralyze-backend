@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
-use App\Models\Company;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+
+use App\Models\User;
+use App\Models\Company;
+use App\Models\Department;
 
 class AuthController extends Controller
 {
@@ -51,6 +53,13 @@ class AuthController extends Controller
         $company->zip = $request->company_zip;
         $company->size = $request->company_size;
         $company->save();
+
+        // Crear el departamento por defecto
+        $department = new Department();
+        $department->name = 'General';
+        $department->description = 'General department';
+        $department->company_id = $company->id;
+        $department->save();
     
         // Crear el usuario y asignarle la empresa
         $user = new User();
@@ -60,6 +69,7 @@ class AuthController extends Controller
         $user->password = Hash::make($request->password);
         $user->role = 'admin'; // Por defecto admin
         $user->company_id = $company->id; // Asignar la empresa creada
+        $user->department_id = $department->id; // Asignar el departamento creado
         $user->created_by = null;
         $user->save();
     

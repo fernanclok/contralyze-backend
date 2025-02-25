@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ClientController;
 
 /*
@@ -39,6 +40,14 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
 Route::prefix('users')->group(function () {
     Route::post('/create', [UserController::class, 'createUser']);
     Route::get('/all', [UserController::class, 'allUsers']);
+})->middleware('jwt.auth');
+
+//department routes
+Route::prefix('departments')->group(function () {
+    Route::post('/create', [DepartmentController::class, 'createDepartment']);
+    Route::get('/all', [DepartmentController::class, 'allDepartments']);
+    Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
+    Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
 })->middleware('jwt.auth');
 
 //client routes
