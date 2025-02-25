@@ -30,7 +30,7 @@ class AuthController extends Controller
             'password' => 'required|string',
             'role' => 'in:admin,user',
         ]);
-    
+
         if ($validator->fails()) {
             $errors = $validator->errors();
             if ($errors->has('company_email')) {
@@ -41,7 +41,7 @@ class AuthController extends Controller
             }
             return response()->json($errors, 400);
         }
-    
+
         // Crear la empresa
         $company = new Company();
         $company->name = $request->company_name;
@@ -60,7 +60,7 @@ class AuthController extends Controller
         $department->description = 'General department';
         $department->company_id = $company->id;
         $department->save();
-    
+
         // Crear el usuario y asignarle la empresa
         $user = new User();
         $user->first_name = $request->first_name;
@@ -72,7 +72,7 @@ class AuthController extends Controller
         $user->department_id = $department->id; // Asignar el departamento creado
         $user->created_by = null;
         $user->save();
-    
+
         return response()->json([
             'message' => 'User and Company created successfully',
             'user' => $user,
@@ -102,7 +102,7 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user,
-            'token' => $token,
+            'token' => $this->respondWithToken($token),
         ], 200);
     }
 
