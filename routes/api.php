@@ -34,15 +34,13 @@ Route::prefix('auth')->group(function () {
     Route::post('/refresh', [AuthController::class, 'refresh']);
 });
 
-Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
-
 //user routes
 Route::prefix('users')->group(function () {
     Route::post('/create', [UserController::class, 'createUser']);
     Route::get('/all', [UserController::class, 'allUsers']);
     Route::put('/update/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete/{id}', [UserController::class, 'deleteUser']);
-})->middleware('jwt.auth');
+})->middleware('jwt');
 
 //department routes
 Route::prefix('departments')->group(function () {

@@ -74,7 +74,7 @@ class UserController extends Controller
             'email' => 'required|email',
             'password' => 'nullable|string|min:6',
             'role' => 'in:admin,user',
-            'status' => 'in:active,inactive',          
+            'status' => 'in:active,inactive',
             'department_id' => 'required|integer|exists:departments,id',
 
         ]);
