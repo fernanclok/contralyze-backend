@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('type');
+            $table->string('type');          
+            $table->foreignId('department_id')->constrained()->onDelete('cascade');
             $table->timestamps();
+
         });
     }
 
