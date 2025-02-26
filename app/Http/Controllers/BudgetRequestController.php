@@ -15,7 +15,7 @@ class BudgetRequestController extends Controller
         $requests = BudgetRequest::where('user_id', $user_id)
             ->with(['category', 'reviewer'])
             ->orderBy('request_date', 'desc')
-            ->get();
+            ->paginate(10); // Added pagination
 
         return response()->json(['requests' => $requests]);
     }
@@ -51,35 +51,62 @@ class BudgetRequestController extends Controller
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
+    public function reject($id)
+    {
+        $budgetRequest = BudgetRequest::findOrFail($id);
+        $budgetRequest->status = 'rejected';
+        $budgetRequest->reviewed_by = auth()->id();
+        $budgetRequest->save();
+
+        return response()->json([
+            'message' => 'Budget request rejected successfully',
+            'request' => $budgetRequest
+        ]);
+    }
+
     public function show(string $id)
     {
-        //
+        $budgetRequest = BudgetRequest::with(['category', 'reviewer'])->findOrFail($id);
+
+        return response()->json(['request' => $budgetRequest]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
-        //
+        $validated = $request->validate([
+            'category_id' => 'sometimes|required|exists:categories,id',
+            'requested_amount' => 'sometimes|required|numeric|min:0',
+            'description' => 'sometimes|required|string',
+            'status' => 'sometimes|required|in:pending,approved,rejected'
+        ]);
+
+        $budgetRequest = BudgetRequest::findOrFail($id);
+        $budgetRequest->update($validated);
+
+        return response()->json([
+            'message' => 'Budget request updated successfully',
+            'request' => $budgetRequest
+        ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
+        $budgetRequest = BudgetRequest::findOrFail($id);
+        $budgetRequest->delete();
+
+        return response()->json([
+            'message' => 'Budget request deleted successfully'
+        ]);
+    }
+
+    public function getByStatus($user_id, $status)
+    {
+        $requests = BudgetRequest::where('user_id', $user_id)
+            ->where('status', $status)
+            ->with(['category', 'reviewer'])
+            ->orderBy('request_date', 'desc')
+            ->paginate(10); // Added pagination
+
+        return response()->json(['requests' => $requests]);
     }
 }

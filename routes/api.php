@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
 
+
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\BudgetRequestController;
+use App\Http\Controllers\TransactionController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -38,13 +43,11 @@ Route::prefix('clients')->group(function () {
     Route::get('/all', [ClientController::class, 'allClients']);
 });
 
-use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\BudgetRequestController;
 
 // Budget Routes
 Route::prefix('budgets')->group(function () {
-    // List all budgets for a user
-    Route::get('/user/{user_id}', [BudgetController::class, 'index']);
+    // List all budgets for a specific user
+    Route::get('/all', [BudgetController::class, 'index']);
     
     // Get a specific budget
     Route::get('/{id}', [BudgetController::class, 'show']);
@@ -67,8 +70,8 @@ Route::prefix('budgets')->group(function () {
 
 // Budget Request Routes
 Route::prefix('budget-requests')->group(function () {
-    // List all budget requests for a user
-    Route::get('/user/{user_id}', [BudgetRequestController::class, 'index']);
+    // List all budget requests
+    Route::get('/all', [BudgetRequestController::class, 'index']);
     
     // Get a specific budget request
     Route::get('/{id}', [BudgetRequestController::class, 'show']);
@@ -90,4 +93,25 @@ Route::prefix('budget-requests')->group(function () {
     
     // Get pending requests
     Route::get('/pending/{user_id}', [BudgetRequestController::class, 'getPendingRequests']);
+});
+
+// Transaction Routes
+Route::prefix('transactions')->group(function () {
+    // List all transactions
+    Route::get('/all', [TransactionController::class, 'index']);
+    
+    // Get a specific transaction
+    Route::get('/{id}', [TransactionController::class, 'show']);
+    
+    // Create a new transaction
+    Route::post('/create', [TransactionController::class, 'store']);
+    
+    // Update a transaction
+    Route::put('/{id}', [TransactionController::class, 'update']);
+    
+    // Delete a transaction
+    Route::delete('/{id}', [TransactionController::class, 'destroy']);
+    
+    // Get transactions by category
+    Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
 });
