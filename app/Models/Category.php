@@ -13,7 +13,13 @@ class Category extends Model
     protected $fillable = [
         'name',
         'type',
+        'department_id'
     ];
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
 
 
     public function budgets()
