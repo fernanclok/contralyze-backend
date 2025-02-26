@@ -76,7 +76,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'User and Company created successfully',
             'user' => $user,
-            'company' => $company
+            'company' => $company,
+            'token' => $this->respondWithToken(Auth::login($user)),
         ], 201);
     }
 

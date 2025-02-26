@@ -8,6 +8,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CompanyController;
+use Illuminate\Support\Facades\Redis;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +48,10 @@ Route::prefix('users')->group(function () {
 Route::prefix('departments')->group(function () {
     Route::post('/create', [DepartmentController::class, 'createDepartment']);
     Route::get('/all', [DepartmentController::class, 'allDepartments']);
+
+    //  get company departments
+    Route::get('/all/{id}', [DepartmentController::class, 'allDepartmentsByUser']);
+
     Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
     Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
 })->middleware('jwt.auth');
@@ -57,4 +63,13 @@ Route::prefix('clients')->group(function () {
     Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
     Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
     Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
+});
+
+// Company routes
+Route::prefix('companies')->group(function () {
+    Route::get('/all', [CompanyController::class, 'allCompanies']);
+    Route::get('/company/{id}', [CompanyController::class, 'companyInfo']);
+    Route::get('/company/users/{id}', [CompanyController::class, 'allUsers']);
+    Route::put('/company/update/{id}', [CompanyController::class, 'updateCompany']);
+    Route::delete('/company/delete/{id}', [CompanyController::class, 'deleteCompany']);
 });
