@@ -3,40 +3,84 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+
+use App\Models\User;
+use App\Models\Company;
+use App\Models\Department;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'company_name' => 'required|string',
+            'company_email' => 'required|email|unique:companies,email',
+            'company_phone' => 'required|string',
+            'company_address' => 'required|string',
+            'company_city' => 'required|string',
+            'company_state' => 'required|string',
+            'company_zip' => 'required|string',
+            'company_size' => 'required|string',
             'first_name' => 'required|string',
             'last_name' => 'required|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|string',
+            'role' => 'in:admin,user',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
+            $errors = $validator->errors();
+            if ($errors->has('company_email')) {
+                return response()->json(['message' => 'Company email already registered'], 400);
+            }
+            if ($errors->has('email')) {
+                return response()->json(['message' => 'User email already registered'], 400);
+            }
+            return response()->json($errors, 400);
         }
 
+        // Crear la empresa
+        $company = new Company();
+        $company->name = $request->company_name;
+        $company->email = $request->company_email;
+        $company->phone = $request->company_phone;
+        $company->address = $request->company_address;
+        $company->city = $request->company_city;
+        $company->state = $request->company_state;
+        $company->zip = $request->company_zip;
+        $company->size = $request->company_size;
+        $company->save();
+
+        // Crear el departamento por defecto
+        $department = new Department();
+        $department->name = 'General';
+        $department->description = 'General department';
+        $department->company_id = $company->id;
+        $department->save();
+
+        // Crear el usuario y asignarle la empresa
         $user = new User();
         $user->first_name = $request->first_name;
         $user->last_name = $request->last_name;
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
-        $user->role = 'admin';
+        $user->role = 'admin'; // Por defecto admin
+        $user->status = 'active'; // Por defecto activo
+        $user->company_id = $company->id; // Asignar la empresa creada
+        $user->department_id = $department->id; // Asignar el departamento creado
         $user->created_by = null;
         $user->save();
 
         return response()->json([
-            'message' => 'User created successfully',
+            'message' => 'User and Company created successfully',
             'user' => $user,
+            'company' => $company
         ], 201);
     }
+
 
     public function login(Request $request)
     {
@@ -57,9 +101,15 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        if ($user->status === 'inactive') {
+            // Invalidar el token generado
+            Auth::logout();
+            return response()->json(['message' => 'Your account is inactive. Please contact support.'], 403);
+        }
+
         return response()->json([
             'user' => $user,
-            'token' => $this->respondWithToken($token),
+            'token' => $token,
         ], 200);
     }
 
@@ -70,8 +120,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-            auth()->logout();
-            return response()->json(['message' => 'User logged out and token invalidated'], 200);
+        auth()->logout();
+        return response()->json(['message' => 'User logged out and token invalidated'], 200);
     }
 
     public function me()

@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ClientController;
 
 
@@ -23,6 +25,8 @@ use App\Http\Controllers\TransactionController;
 |
 */
 
+
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -31,18 +35,34 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/logout', [AuthController::class, 'logout']);
-    Route::get('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
 });
 
-Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
+//user routes
+Route::prefix('users')->group(function () {
+    Route::post('/create', [UserController::class, 'createUser']);
+    Route::get('/all', [UserController::class, 'allUsers']);
+    Route::put('/update/{id}', [UserController::class, 'updateUser']);
+    Route::delete('/delete/{id}', [UserController::class, 'deleteUser']);
+})->middleware('jwt');
+
+//department routes
+Route::prefix('departments')->group(function () {
+    Route::post('/create', [DepartmentController::class, 'createDepartment']);
+    Route::get('/all', [DepartmentController::class, 'allDepartments']);
+    Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
+    Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
+})->middleware('jwt.auth');
 
 //client routes
 Route::prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
+    Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
+    Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
+    Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
 });
-
 
 // Budget Routes
 Route::prefix('budgets')->group(function () {
@@ -115,3 +135,4 @@ Route::prefix('transactions')->group(function () {
     // Get transactions by category
     Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
 });
+

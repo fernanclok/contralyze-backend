@@ -10,16 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class JwtMiddleware
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
             
             if (!$user) {
-                return response()->json(['message' => 'User not found'], Response::HTTP_UNAUTHORIZED);
+                return response()->json(['message' => 'User not found']);
             }
         } catch (JWTException $e) {
-            return response()->json(['message' => 'Invalid or expired token'], Response::HTTP_UNAUTHORIZED);
+            return response()->json(['message' => 'Invalid or expired token']);
         }
 
         return $next($request);
