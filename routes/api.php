@@ -40,6 +40,8 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('jwt.auth');
 Route::prefix('users')->group(function () {
     Route::post('/create', [UserController::class, 'createUser']);
     Route::get('/all', [UserController::class, 'allUsers']);
+    Route::put('/update/{id}', [UserController::class, 'updateUser']);
+    Route::delete('/delete/{id}', [UserController::class, 'deleteUser']);
 })->middleware('jwt.auth');
 
 //department routes

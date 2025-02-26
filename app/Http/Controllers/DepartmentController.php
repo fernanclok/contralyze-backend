@@ -78,6 +78,15 @@ class DepartmentController extends Controller
 
     public function updateDepartment(Request $request, $id)
     {
+        $validator = Validator::make($request->all(), [
+            'department_name' => 'required|string',
+            'department_description' => 'string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
         $user = Auth::user();
 
         if (!$user || $user->role !== 'admin') {
