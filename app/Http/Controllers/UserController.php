@@ -43,6 +43,7 @@ class UserController extends Controller
         $user->password = Hash::make($request->password);
         $user->role = $request->role;
         $user->company_id = $admin->company_id; // Se asigna el mismo company_id del admin
+        $user->department_id = $admin->department_id;
         $user->created_by = $admin->id;
         $user->save();
 

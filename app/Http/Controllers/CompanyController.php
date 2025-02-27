@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 use App\Models\Company;
+use App\Models\User;
 
 class CompanyController extends Controller
 {
@@ -29,8 +30,8 @@ class CompanyController extends Controller
         return response()->json($company);
     }
 
-    // get all users in company
-    public function allUsers()
+    // get all users in company by created_by
+    public function allUsersByCompany()
     {
         $user = Auth::user();
 
@@ -38,7 +39,10 @@ class CompanyController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $users = Company::find($user->company_id)->users;
+        $users = User::where('company_id', $user->company_id)
+        // and created by the admin
+            ->where('created_by', $user->id)
+            ->get();
 
         return response()->json($users);
     }

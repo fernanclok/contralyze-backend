@@ -107,6 +107,8 @@ class DepartmentController extends Controller
         log($user->company_id);
 
         $departments = Department::where('company_id', $user->company_id)
+            // get the departments in order of the last created
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($departments);

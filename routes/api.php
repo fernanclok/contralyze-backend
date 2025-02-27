@@ -69,7 +69,7 @@ Route::prefix('clients')->group(function () {
 Route::prefix('companies')->group(function () {
     Route::get('/all', [CompanyController::class, 'allCompanies']);
     Route::get('/company/{id}', [CompanyController::class, 'companyInfo']);
-    Route::get('/company/users/{id}', [CompanyController::class, 'allUsers']);
+    Route::get('/company/users/{id}', [CompanyController::class, 'allUsersByCompany']);
     Route::put('/company/update/{id}', [CompanyController::class, 'updateCompany']);
     Route::delete('/company/delete/{id}', [CompanyController::class, 'deleteCompany']);
 });
