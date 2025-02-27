@@ -77,7 +77,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'User and Company created successfully',
             'user' => $user,
-            'company' => $company
+            'company' => $company,
+            'token' => $this->respondWithToken(Auth::login($user)),
         ], 201);
     }
 
@@ -109,7 +110,7 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user,
-            'token' => $token,
+            'token' => $this->respondWithToken($token),
         ], 200);
     }
 
