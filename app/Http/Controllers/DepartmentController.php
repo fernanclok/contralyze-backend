@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 use App\Models\Department;
+use App\Models\Company;
 
 class DepartmentController extends Controller
 {
@@ -48,15 +49,15 @@ class DepartmentController extends Controller
     public function allDepartments()
     {
         $user = Auth::user();
-    
+
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-    
+
         $departments = Department::where('company_id', $user->company_id)
-        ->withCount('users')
-        ->get();
-    
+            ->withCount('users')
+            ->get();
+
         return response()->json($departments);
     }
 
@@ -102,5 +103,23 @@ class DepartmentController extends Controller
             'message' => 'Department updated successfully',
             'department' => $department,
         ]);
+    }
+
+    // get all departaments by user and company
+    public function allDepartmentsByUser($id)
+    {
+        $user = Auth::user();
+
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        log($user->company_id);
+
+        $departments = Department::where('company_id', $user->company_id)
+            // get the departments in order of the last created
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($departments);
     }
 }
