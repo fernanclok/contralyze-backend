@@ -12,7 +12,7 @@ class DepartmentController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('jwt.auth');
+        $this->middleware('jwt');
     }
 
     public function createDepartment(Request $request)

@@ -8,8 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ClientController;
-
-
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
@@ -40,28 +39,36 @@ Route::prefix('auth')->group(function () {
 });
 
 //user routes
-Route::prefix('users')->group(function () {
+Route::middleware('jwt')->prefix('users')->group(function () {
     Route::post('/create', [UserController::class, 'createUser']);
     Route::get('/all', [UserController::class, 'allUsers']);
     Route::put('/update/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete/{id}', [UserController::class, 'deleteUser']);
-})->middleware('jwt');
+});
 
 //department routes
-Route::prefix('departments')->group(function () {
+Route::middleware('jwt')->prefix('departments')->group(function () {
     Route::post('/create', [DepartmentController::class, 'createDepartment']);
     Route::get('/all', [DepartmentController::class, 'allDepartments']);
     Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
     Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
-})->middleware('jwt.auth');
+});
 
 //client routes
-Route::prefix('clients')->group(function () {
+Route::middleware('jwt')->prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
     Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
     Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
     Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
+});
+
+//category routes
+Route::middleware('jwt')->prefix('categories')->group(function () {
+    Route::post('/create', [CategoryController::class, 'createCategory']);
+    Route::get('/all', [CategoryController::class, 'getCategories']);
+    Route::delete('/delete/{id}', [CategoryController::class, 'deleteCategory']);
+    Route::put('/update/{id}', [CategoryController::class, 'updateCategory']);
 });
 
 // Budget Routes
