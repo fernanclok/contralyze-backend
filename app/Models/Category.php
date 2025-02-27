@@ -13,7 +13,8 @@ class Category extends Model
     protected $fillable = [
         'name',
         'type',
-        'department_id'
+        'department_id',
+        'company_id'
     ];
 
     public function department()
@@ -21,6 +22,10 @@ class Category extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function budgets()
     {

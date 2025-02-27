@@ -13,8 +13,9 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('jwt.auth');
+        $this->middleware('jwt');
     }
+    
     public function createUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
