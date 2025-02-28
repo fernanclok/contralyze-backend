@@ -15,7 +15,7 @@ class UserController extends Controller
     {
         $this->middleware('jwt');
     }
-    
+
     public function createUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -63,7 +63,13 @@ class UserController extends Controller
 
     public function allUsers()
     {
-        $users = User::all();
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $users = User::where('company_id', $user->company_id)->get();
 
         return response()->json($users);
     }
@@ -78,7 +84,6 @@ class UserController extends Controller
             'role' => 'in:admin,user',
             'status' => 'in:active,inactive',
             'department_id' => 'required|integer|exists:departments,id',
-
         ]);
 
         if ($validator->fails()) {
@@ -93,15 +98,26 @@ class UserController extends Controller
         }
 
         $user = User::find($id);
-        $user->first_name = $request->first_name;
-        $user->last_name = $request->last_name;
-        $user->email = $request->email;
-        $user->role = $request->role;
-        $user->status = $request->status;
-        $user->department_id = $request->department_id;
 
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
+        // Verificar si el usuario es el primer usuario de la compañía
+        if ($user->is_first_user) {
+            // Permitir solo la actualización de first_name, last_name y password
+            $user->first_name = $request->first_name;
+            $user->last_name = $request->last_name;
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
+        } else {
+            // Permitir la actualización de todos los campos
+            $user->first_name = $request->first_name;
+            $user->last_name = $request->last_name;
+            $user->email = $request->email;
+            $user->role = $request->role;
+            $user->status = $request->status;
+            $user->department_id = $request->department_id;
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
         }
 
         $user->save();

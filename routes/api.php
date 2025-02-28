@@ -52,10 +52,8 @@ Route::middleware('jwt')->prefix('users')->group(function () {
 Route::middleware('jwt')->prefix('departments')->group(function () {
     Route::post('/create', [DepartmentController::class, 'createDepartment']);
     Route::get('/all', [DepartmentController::class, 'allDepartments']);
-
     //  get company departments
     Route::get('/all/{id}', [DepartmentController::class, 'allDepartmentsByUser']);
-
     Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
     Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
 });
@@ -71,7 +69,7 @@ Route::middleware('jwt')->prefix('clients')->group(function () {
 
 
 // Company routes
-Route::prefix('companies')->group(function () {
+Route::middleware('jwt')->prefix('companies')->group(function () {
     Route::get('/all', [CompanyController::class, 'allCompanies']);
     Route::get('/company/{id}', [CompanyController::class, 'companyInfo']);
     Route::get('/company/users/{id}', [CompanyController::class, 'allUsersByCompany']);
