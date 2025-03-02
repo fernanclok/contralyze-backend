@@ -111,4 +111,47 @@ class UserController extends Controller
             'user' => $user,
         ]);
     }
+
+    public function updateUserStatus(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        // Obtener el usuario autenticado
+        $admin = Auth::user();
+
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $user = User::find($id);
+        $user->status = $request->status;
+        $user->save();
+
+        return response()->json([
+            'message' => 'User status updated successfully',
+            'user' => $user,
+        ]);
+    }
+
+    public function deleteUser($id)
+    {
+        $user = Auth::user();
+
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $user = User::find($id);
+        $user->delete();
+
+        return response()->json([
+            'message' => 'User deleted successfully',
+        ]);
+    }
 }

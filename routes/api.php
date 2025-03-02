@@ -45,6 +45,7 @@ Route::middleware('jwt')->prefix('users')->group(function () {
     Route::post('/create', [UserController::class, 'createUser']);
     Route::get('/all', [UserController::class, 'allUsers']);
     Route::put('/update/{id}', [UserController::class, 'updateUser']);
+    Route::put('/update/status/{id}', [UserController::class, 'updateUserStatus']);
     Route::delete('/delete/{id}', [UserController::class, 'deleteUser']);
 });
 
