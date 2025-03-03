@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
 
-class SuppliersController extends Controller
+class SupplierController extends Controller
 {
     public function __construct()
     {
@@ -30,18 +30,21 @@ class SuppliersController extends Controller
             'supplier' => $supplier,
         ], 201);
     }
-    // Get all suppliers
-    public function allSuppliers()
-    {
-        $suppliers = Supplier::all();
-
-        return response()->json($suppliers);
-    }
-
-    // Get all suppliers by user
+    
     public function allSuppliersbyUser($id)
     {
-        $suppliers = Supplier::where('created_by', $id)->get();
+
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        if ($user->role === 'admin') {
+            $suppliers = Supplier::all();
+        } else {
+            $suppliers = Supplier::where('created_by', $id)->get();
+        }
 
         return response()->json($suppliers);
     }

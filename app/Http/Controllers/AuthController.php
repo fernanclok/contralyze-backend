@@ -68,7 +68,7 @@ class AuthController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->role = 'admin'; // Por defecto admin
-        $user->status = 'active'; // Por defecto activo
+        $user->isActive = true; // Por defecto activo
         $user->is_first_user = true; // Indicar que es el primer usuario
         $user->company_id = $company->id; // Asignar la empresa creada
         $user->department_id = $department->id; // Asignar el departamento creado
@@ -103,7 +103,7 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        if ($user->status === 'inactive') {
+        if ($user->isActive === false) {
             // Invalidar el token generado
             Auth::logout();
             return response()->json(['message' => 'Your account is inactive. Please contact support.'], 403);
