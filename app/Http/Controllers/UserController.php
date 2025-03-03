@@ -48,7 +48,7 @@ class UserController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->role = $request->role;
-        $user->status = 'active';
+        $user->isActive = true;
         $user->department_id = $request->department_id;
         $user->company_id = $admin->company_id; // Se asigna el mismo company_id del admin
         $user->department_id = $admin->department_id;
@@ -82,7 +82,6 @@ class UserController extends Controller
             'email' => 'required|email',
             'password' => 'nullable|string|min:6',
             'role' => 'in:admin,user',
-            'status' => 'in:active,inactive',
             'department_id' => 'required|integer|exists:departments,id',
         ]);
 
@@ -109,11 +108,13 @@ class UserController extends Controller
             }
         } else {
             // Permitir la actualización de todos los campos
+            $isActive = filter_var($request->isActive, FILTER_VALIDATE_BOOLEAN);
+
             $user->first_name = $request->first_name;
             $user->last_name = $request->last_name;
             $user->email = $request->email;
             $user->role = $request->role;
-            $user->status = $request->status;
+            $user->isActive = $isActive;
             $user->department_id = $request->department_id;
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
@@ -127,6 +128,4 @@ class UserController extends Controller
             'user' => $user,
         ]);
     }
-
-   
 }
