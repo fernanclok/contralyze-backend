@@ -21,7 +21,7 @@ class SupplierController extends Controller
         $supplier->email = $request->email;
         $supplier->phone = $request->phone;
         $supplier->address = $request->address;
-        $supplier->company_name = $request->company_name;
+        $supplier->isActive = true;
         $supplier->created_by = Auth::id();
         $supplier->save();
 
@@ -31,9 +31,8 @@ class SupplierController extends Controller
         ], 201);
     }
     
-    public function allSuppliersbyUser($id)
+    public function allSuppliers()
     {
-
         $user = Auth::user();
 
         if (!$user) {
@@ -41,10 +40,26 @@ class SupplierController extends Controller
         }
 
         if ($user->role === 'admin') {
-            $suppliers = Supplier::all();
+            $suppliers = Supplier::with('creator:id,first_name,last_name')->get();
         } else {
-            $suppliers = Supplier::where('created_by', $id)->get();
+            $suppliers = Supplier::with('creator:id,first_name,last_name')->where('created_by', $user->id)->get();
         }
+
+        $suppliers = $suppliers->map(function ($supplier) {
+            return [
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'email' => $supplier->email,
+                'phone' => $supplier->phone,
+                'address' => $supplier->address,
+                'isActive' => $supplier->isActive,
+                'created_by' => $supplier->creator ? [
+                    'id' => $supplier->creator->id,
+                    'first_name' => $supplier->creator->first_name,
+                    'last_name' => $supplier->creator->last_name,
+                ] : null,
+            ];
+        });
 
         return response()->json($suppliers);
     }
@@ -53,10 +68,14 @@ class SupplierController extends Controller
     public function updateSupplier(Request $request, $id)
     {
         $supplier = Supplier::find($id);
+
+        $isActive = filter_var($request->isActive, FILTER_VALIDATE_BOOLEAN);
+
         $supplier->name = $request->name;
         $supplier->email = $request->email;
         $supplier->phone = $request->phone;
         $supplier->address = $request->address;
+        $supplier->isActive = $isActive;
         $supplier->save();
 
         return response()->json([

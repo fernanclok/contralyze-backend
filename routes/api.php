@@ -64,9 +64,10 @@ Route::middleware('jwt')->prefix('clients')->group(function () {
     Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
 });
 
+//supplier routes
 Route::middleware('jwt')->prefix('suppliers')->group(function () {
     Route::post('/create', [SupplierController::class, 'createSupplier']);
-    Route::get('/all/{id}', [SupplierController::class, 'allSuppliersbyUser']);
+    Route::get('/all', [SupplierController::class, 'allSuppliers']);
     Route::put('/supplier/update/{id}', [SupplierController::class, 'updateSupplier']);
     Route::delete('/supplier/delete/{id}', [SupplierController::class, 'deleteSupplier']);
 });
