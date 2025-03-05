@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('role')->default('admin');
             $table->string('password');
             $table->string('status')->default('active');
+            $table->string('photo_profile_path')->nullable();
             $table->unsignedBigInteger('company_id');
             $table->unsignedBigInteger('department_id');
             $table->unsignedBigInteger('created_by')->nullable();
