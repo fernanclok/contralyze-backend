@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('phone');
             $table->string('address');
+            $table->boolean('isActive')->default(true);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
 

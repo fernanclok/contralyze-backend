@@ -18,8 +18,8 @@ class CategoryController extends Controller
     public function createCategory(Request $request)
     {
         $validator = validator::make($request->all(), [
-            'name' => 'required|string',
-            'type' => 'required|string',
+            'category_name' => 'required|string',
+            'category_type' => 'required|string',
             'department_id' => 'required|integer|exists:departments,id',
         ]);
 
@@ -34,8 +34,8 @@ class CategoryController extends Controller
         }
 
         $category = new Category();
-        $category->name = $request->name;
-        $category->type = $request->type;
+        $category->name = $request->category_name;
+        $category->type = $request->category_type;
         $category->department_id = $request->department_id;
         $category->company_id = $user->company_id;
         $category->save();

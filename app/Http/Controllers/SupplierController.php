@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
 
-class SuppliersController extends Controller
+class SupplierController extends Controller
 {
     public function __construct()
     {
@@ -21,7 +21,7 @@ class SuppliersController extends Controller
         $supplier->email = $request->email;
         $supplier->phone = $request->phone;
         $supplier->address = $request->address;
-        $supplier->company_name = $request->company_name;
+        $supplier->isActive = true;
         $supplier->created_by = Auth::id();
         $supplier->save();
 
@@ -30,18 +30,36 @@ class SuppliersController extends Controller
             'supplier' => $supplier,
         ], 201);
     }
-    // Get all suppliers
+    
     public function allSuppliers()
     {
-        $suppliers = Supplier::all();
+        $user = Auth::user();
 
-        return response()->json($suppliers);
-    }
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
-    // Get all suppliers by user
-    public function allSuppliersbyUser($id)
-    {
-        $suppliers = Supplier::where('created_by', $id)->get();
+        if ($user->role === 'admin') {
+            $suppliers = Supplier::with('creator:id,first_name,last_name')->get();
+        } else {
+            $suppliers = Supplier::with('creator:id,first_name,last_name')->where('created_by', $user->id)->get();
+        }
+
+        $suppliers = $suppliers->map(function ($supplier) {
+            return [
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'email' => $supplier->email,
+                'phone' => $supplier->phone,
+                'address' => $supplier->address,
+                'isActive' => $supplier->isActive,
+                'created_by' => $supplier->creator ? [
+                    'id' => $supplier->creator->id,
+                    'first_name' => $supplier->creator->first_name,
+                    'last_name' => $supplier->creator->last_name,
+                ] : null,
+            ];
+        });
 
         return response()->json($suppliers);
     }
@@ -50,10 +68,14 @@ class SuppliersController extends Controller
     public function updateSupplier(Request $request, $id)
     {
         $supplier = Supplier::find($id);
+
+        $isActive = filter_var($request->isActive, FILTER_VALIDATE_BOOLEAN);
+
         $supplier->name = $request->name;
         $supplier->email = $request->email;
         $supplier->phone = $request->phone;
         $supplier->address = $request->address;
+        $supplier->isActive = $isActive;
         $supplier->save();
 
         return response()->json([

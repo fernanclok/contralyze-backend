@@ -8,8 +8,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\CompanyController;
-use Illuminate\Support\Facades\Redis;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
@@ -51,10 +51,8 @@ Route::middleware('jwt')->prefix('users')->group(function () {
 Route::middleware('jwt')->prefix('departments')->group(function () {
     Route::post('/create', [DepartmentController::class, 'createDepartment']);
     Route::get('/all', [DepartmentController::class, 'allDepartments']);
-
     //  get company departments
     Route::get('/all/{id}', [DepartmentController::class, 'allDepartmentsByUser']);
-
     Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
     Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
 });
@@ -63,15 +61,20 @@ Route::middleware('jwt')->prefix('departments')->group(function () {
 Route::middleware('jwt')->prefix('clients')->group(function () {
     Route::post('/create', [ClientController::class, 'createClient']);
     Route::get('/all', [ClientController::class, 'allClients']);
-    Route::get('/all/{id}', [ClientController::class, 'allClientsbyUser']);
     Route::put('/client/update/{id}', [ClientController::class, 'updateClient']);
-    Route::delete('/client/delete/{id}', [ClientController::class, 'deleteClient']);
+});
+
+//supplier routes
+Route::middleware('jwt')->prefix('suppliers')->group(function () {
+    Route::post('/create', [SupplierController::class, 'createSupplier']);
+    Route::get('/all', [SupplierController::class, 'allSuppliers']);
+    Route::put('/supplier/update/{id}', [SupplierController::class, 'updateSupplier']);
+    Route::delete('/supplier/delete/{id}', [SupplierController::class, 'deleteSupplier']);
 });
 
 
 // Company routes
-Route::prefix('companies')->group(function () {
-    Route::get('/all', [CompanyController::class, 'allCompanies']);
+Route::middleware('jwt')->prefix('companies')->group(function () {
     Route::get('/company/{id}', [CompanyController::class, 'companyInfo']);
     Route::get('/company/users/{id}', [CompanyController::class, 'allUsersByCompany']);
     Route::put('/company/update/{id}', [CompanyController::class, 'updateCompany']);
@@ -132,7 +135,7 @@ Route::prefix('budget-requests')->group(function () {
 
     // Reject a budget request
     Route::put('/{id}/reject', [BudgetRequestController::class, 'reject']);
-
+  
     // Get pending requests
     Route::get('/pending/{user_id}', [BudgetRequestController::class, 'getPendingRequests']);
 });
