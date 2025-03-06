@@ -19,7 +19,11 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('role')->default('admin');
             $table->string('password');
-            $table->unsignedBigInteger('company_id')->nullable();
+            $table->string('photo_profile_path')->nullable();
+            $table->boolean('isActive')->default(true);
+            $table->boolean('is_first_user')->default(false);
+            $table->unsignedBigInteger('company_id');
+            $table->unsignedBigInteger('department_id');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->rememberToken();
             $table->timestamps();
