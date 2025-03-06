@@ -57,7 +57,6 @@ class UserController extends Controller
         $user->isActive = true;
         $user->department_id = $request->department_id;
         $user->company_id = $admin->company_id; // Se asigna el mismo company_id del admin
-        $user->department_id = $admin->department_id;
         $user->created_by = $admin->id;
         $user->save();
 
