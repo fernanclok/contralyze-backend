@@ -25,6 +25,9 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'role',
         'status',
+        'photo_profile_path',
+        'isActive',
+        'is_first_user',
         'company_id',
         'department_id',
         'created_by',
@@ -48,33 +51,34 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-    ]; 
-    
+    ];
+
     /**
-    * Get the identifier that will be stored in the subject claim of the JWT.
-    *
-    * @return mixed
-    */
-   public function getJWTIdentifier()
-   {
-       return $this->getKey();
-   }
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
 
-   /**
-    * Return a key value array, containing any custom claims to be added to the JWT.
-    *
-    * @return array
-    */
-   public function getJWTCustomClaims()
-   {
-       return [];
-   }
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     *
+     * @return array
+     */
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 
-   /**
-    * Get the user who created this user.
-    */
-   public function creator()
-   {
-       return $this->belongsTo(User::class, 'created_by');
-   }
+    /**
+     * Get the user who created this user.
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
 }

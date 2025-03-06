@@ -56,8 +56,8 @@ class AuthController extends Controller
 
         // Crear el departamento por defecto
         $department = new Department();
-        $department->name = 'General';
-        $department->description = 'General department';
+        $department->name = 'Admin';
+        $department->description = 'Admin department';
         $department->company_id = $company->id;
         $department->save();
 
@@ -68,7 +68,8 @@ class AuthController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->role = 'admin'; // Por defecto admin
-        $user->status = 'active'; // Por defecto activo
+        $user->isActive = true; // Por defecto activo
+        $user->is_first_user = true; // Indicar que es el primer usuario
         $user->company_id = $company->id; // Asignar la empresa creada
         $user->department_id = $department->id; // Asignar el departamento creado
         $user->created_by = null;
@@ -77,7 +78,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'User and Company created successfully',
             'user' => $user,
-            'company' => $company
+            'company' => $company,
+            'token' => $this->respondWithToken(Auth::login($user)),
         ], 201);
     }
 
@@ -101,7 +103,7 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        if ($user->status === 'inactive') {
+        if ($user->isActive === false) {
             // Invalidar el token generado
             Auth::logout();
             return response()->json(['message' => 'Your account is inactive. Please contact support.'], 403);
@@ -109,7 +111,7 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user,
-            'token' => $token,
+            'token' => $this->respondWithToken($token),
         ], 200);
     }
 
