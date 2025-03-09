@@ -90,7 +90,7 @@ Route::middleware('jwt')->prefix('categories')->group(function () {
 });
 
 // Budget Routes
-Route::prefix('budgets')->group(function () {
+Route::middleware('jwt')->prefix('budgets')->group(function () {
     // List all budgets for a specific user
     Route::get('/all', [BudgetController::class, 'index']);
 
@@ -114,25 +114,19 @@ Route::prefix('budgets')->group(function () {
 });
 
 // Budget Request Routes
-Route::prefix('budget-requests')->group(function () {
+Route::middleware('jwt')->prefix('budget-requests')->group(function () {
     // List all budget requests
     Route::get('/all', [BudgetRequestController::class, 'index']);
-
     // Get a specific budget request
     Route::get('/{id}', [BudgetRequestController::class, 'show']);
-
     // Create a new budget request
     Route::post('/create', [BudgetRequestController::class, 'store']);
-
     // Update a budget request
     Route::put('/{id}', [BudgetRequestController::class, 'update']);
-
     // Delete a budget request
     Route::delete('/{id}', [BudgetRequestController::class, 'destroy']);
-
     // Approve a budget request
     Route::put('/{id}/approve', [BudgetRequestController::class, 'approve']);
-
     // Reject a budget request
     Route::put('/{id}/reject', [BudgetRequestController::class, 'reject']);
   
@@ -141,7 +135,7 @@ Route::prefix('budget-requests')->group(function () {
 });
 
 // Transaction Routes
-Route::prefix('transactions')->group(function () {
+Route::middleware('jwt')->prefix('transactions')->group(function () {
     // List all transactions
     Route::get('/all', [TransactionController::class, 'index']);
 
