@@ -8,12 +8,16 @@ use Illuminate\Support\Facades\Auth;
 
 class BudgetController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user_id = Auth::id();
-        $budgets = Budget::where('user_id', $user_id)
-            ->with('category')
-            ->orderBy('created_at', 'desc')
+        $query = Budget::query()->with(['category', 'user']);
+        
+        // Si se proporciona un user_id, filtrar por ese usuario
+        if ($request->has('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+        
+        $budgets = $query->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json(['budgets' => $budgets]);
@@ -21,16 +25,33 @@ class BudgetController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
+        // Verificar si el usuario es administrador
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized. Only administrators can create budgets.'], 403);
+        }
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'max_amount' => 'required|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:active,inactive'
+            'status' => 'sometimes|in:active,inactive,expired'
         ]);
 
-        $validated['user_id'] = Auth::id();
+        // Asignar el ID del usuario actual
+        $validated['user_id'] = $user->id;
+        
+        // Establecer estado activo por defecto
+        if (!isset($validated['status'])) {
+            $validated['status'] = 'active';
+        }
+        
         $budget = Budget::create($validated);
+        
+        // Cargar la relación category para devolverla en la respuesta
+        $budget->load('category');
 
         return response()->json([
             'message' => 'Budget created successfully',
@@ -67,17 +88,24 @@ class BudgetController extends Controller
 
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
+
+        // Verificar si el usuario es administrador
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized. Only administrators can update budgets.'], 403);
+        }
+
         $budget = Budget::findOrFail($id);
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'max_amount' => 'required|numeric|min:0',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:active,inactive'
+            'category_id' => 'sometimes|required|exists:categories,id',
+            'max_amount' => 'sometimes|required|numeric|min:0',
+            'start_date' => 'sometimes|required|date',
+            'end_date' => 'sometimes|required|date|after:start_date',
+            'status' => 'sometimes|required|in:active,inactive,expired'
         ]);
 
-        $validated['user_id'] = Auth::id();
         $budget->update($validated);
+        $budget->load('category');
 
         return response()->json([
             'message' => 'Budget updated successfully',
@@ -87,6 +115,13 @@ class BudgetController extends Controller
 
     public function destroy($id)
     {
+        $user = Auth::user();
+
+        // Verificar si el usuario es administrador
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized. Only administrators can delete budgets.'], 403);
+        }
+
         $budget = Budget::findOrFail($id);
         $budget->delete();
 

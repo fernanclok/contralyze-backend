@@ -109,7 +109,7 @@ Route::middleware('jwt')->prefix('categories')->group(function () {
 });
 
 // Budget Routes
-Route::prefix('budgets')->group(function () {
+Route::middleware('jwt')->prefix('budgets')->group(function () {
     // List all budgets for a specific user
     Route::get('/all', [BudgetController::class, 'index']);
     // Get a specific budget
@@ -127,7 +127,7 @@ Route::prefix('budgets')->group(function () {
 });
 
 // Budget Request Routes
-Route::prefix('budget-requests')->group(function () {
+Route::middleware('jwt')->prefix('budget-requests')->group(function () {
     // List all budget requests
     Route::get('/all', [BudgetRequestController::class, 'index']);
     // Get a specific budget request
@@ -147,7 +147,7 @@ Route::prefix('budget-requests')->group(function () {
 });
 
 // Transaction Routes
-Route::prefix('transactions')->group(function () {
+Route::middleware('jwt')->prefix('transactions')->group(function () {
     // List all transactions
     Route::get('/all', [TransactionController::class, 'index']);
     // Get a specific transaction
