@@ -20,7 +20,7 @@ class CategoryController extends Controller
         $validator = validator::make($request->all(), [
             'category_name' => 'required|string',
             'category_type' => 'required|string',
-            'department_id' => 'required|integer|exists:departments,id',
+            'department_id' => 'sometimes|integer|exists:departments,id',
         ]);
 
         if ($validator->fails()) {
@@ -36,7 +36,9 @@ class CategoryController extends Controller
         $category = new Category();
         $category->name = $request->category_name;
         $category->type = $request->category_type;
-        $category->department_id = $request->department_id;
+        
+        // Usar department_id si se proporciona, de lo contrario usar un valor predeterminado
+        $category->department_id = $request->department_id ?? 1; // Usar un ID predeterminado
         $category->company_id = $user->company_id;
         $category->save();
 
@@ -50,8 +52,9 @@ class CategoryController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || $user->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        // Permitir que todos los usuarios puedan ver las categorías
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $categories = Category::where('company_id', $user->company_id)

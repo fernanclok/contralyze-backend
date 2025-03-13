@@ -4,33 +4,85 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\BudgetRequest;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class BudgetRequestController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index($user_id)
+    public function index(Request $request)
     {
-        $requests = BudgetRequest::where('user_id', $user_id)
-            ->with(['category', 'reviewer'])
-            ->orderBy('request_date', 'desc')
-            ->paginate(10); // Added pagination
+        try {
+            // Consulta inicial con relaciones
+            $query = BudgetRequest::query()->with(['category', 'reviewer', 'user']);
+            
+            // Verificar si se solicitan relaciones específicas
+            if ($request->has('include')) {
+                $includes = explode(',', $request->input('include'));
+                $query->with($includes);
+            }
+            
+            // Si se proporciona un user_id, filtrar por ese usuario
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+            
+            $requests = $query->orderBy('request_date', 'desc')
+                ->get();
+                
+            // Transformar los resultados para asegurar que se incluye toda la información del usuario
+            $requests = $requests->map(function ($request) {
+                // Si no hay información del usuario, obtenerla manualmente
+                if (!$request->user || !isset($request->user->name)) {
+                    $user = User::find($request->user_id);
+                    if ($user) {
+                        $request->user = [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'first_name' => $user->first_name,
+                            'last_name' => $user->last_name
+                        ];
+                    }
+                }
+                return $request;
+            });
 
-        return response()->json(['requests' => $requests]);
+            Log::info('BudgetRequestController@index: Retrieved ' . $requests->count() . ' requests');
+
+            return response()->json(['requests' => $requests]);
+        } catch (\Exception $e) {
+            Log::error('Error en BudgetRequestController@index: ' . $e->getMessage());
+            return response()->json(['error' => 'Error obteniendo las solicitudes: ' . $e->getMessage()], 500);
+        }
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'category_id' => 'required|exists:categories,id',
             'requested_amount' => 'required|numeric|min:0',
             'description' => 'required|string',
-            'status' => 'required|in:pending,approved,rejected'
+            'status' => 'sometimes|in:pending,approved,rejected'
         ]);
 
+        // Asignar el ID del usuario actual
+        $validated['user_id'] = auth()->id();
+        
+        // Establecer estado pendiente por defecto
+        if (!isset($validated['status'])) {
+            $validated['status'] = 'pending';
+        }
+        
+        // Establecer fecha de solicitud
+        $validated['request_date'] = now();
+        
         $budgetRequest = BudgetRequest::create($validated);
+        
+        // Cargar las relaciones para devolverlas en la respuesta
+        $budgetRequest->load(['category', 'user']);
 
         return response()->json([
             'message' => 'Budget request created successfully',
