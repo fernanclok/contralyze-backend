@@ -10,14 +10,17 @@ class PurchaseRequest extends Model
     use HasFactory;
 
     protected $fillable = [
+        'requisition_uid',
+        'title',
+        'total_amount',
+        'justification',
+        'request_date',
+        'priority',
+        'status', 
         'user_id',
         'department_id',
         'supplier_id',
         'client_id',
-        'total_amount',
-        'justification',
-        'request_date',
-        'status',
         'reviewed_by',
     ];
 
