@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
+use App\Models\BudgetRequest;
+use App\Models\User;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -152,5 +155,82 @@ class BudgetController extends Controller
         $budgets = $query->with('category')->get();
 
         return response()->json(['budgets' => $budgets]);
+    }
+
+    public function getByCategory($category_id)
+    {
+        $budgets = Budget::where('category_id', $category_id)
+            ->with(['category', 'user'])
+            ->get();
+
+        return response()->json(['budgets' => $budgets]);
+    }
+
+    /**
+     * Obtener el presupuesto disponible para una categoría específica
+     */
+    public function getAvailableBudget(Request $request)
+    {
+        // Validar los parámetros
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'department_id' => 'sometimes|exists:departments,id'
+        ]);
+
+        $categoryId = $validated['category_id'];
+        
+        // Obtener presupuesto total para la categoría
+        $totalBudget = Budget::where('status', 'active')
+            ->where('category_id', $categoryId)
+            ->sum('max_amount');
+            
+        // Obtener total aprobado para la categoría
+        $totalApproved = BudgetRequest::where('status', 'approved')
+            ->where('category_id', $categoryId)
+            ->sum('requested_amount');
+            
+        $availableBudget = $totalBudget - $totalApproved;
+        
+        $response = [
+            'category_id' => $categoryId,
+            'total_budget' => $totalBudget,
+            'total_approved' => $totalApproved,
+            'available_budget' => $availableBudget
+        ];
+        
+        // Si se solicita información de un departamento específico
+        if (isset($validated['department_id'])) {
+            $departmentId = $validated['department_id'];
+            
+            // Obtener usuarios del departamento
+            $departmentUsers = User::where('department_id', $departmentId)->pluck('id');
+            
+            // Presupuesto asignado al departamento
+            $departmentBudget = Budget::whereIn('user_id', $departmentUsers)
+                ->where('status', 'active')
+                ->where('category_id', $categoryId)
+                ->sum('max_amount');
+                
+            // Presupuesto ya aprobado para el departamento
+            $departmentApproved = BudgetRequest::whereIn('user_id', $departmentUsers)
+                ->where('status', 'approved')
+                ->where('category_id', $categoryId)
+                ->sum('requested_amount');
+                
+            $departmentAvailable = $departmentBudget - $departmentApproved;
+            
+            // Obtener información del departamento
+            $department = Department::find($departmentId);
+            
+            $response['department'] = [
+                'id' => $departmentId,
+                'name' => $department ? $department->name : 'Departamento no encontrado',
+                'budget' => $departmentBudget,
+                'approved' => $departmentApproved,
+                'available' => $departmentAvailable
+            ];
+        }
+        
+        return response()->json($response);
     }
 }
