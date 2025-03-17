@@ -19,11 +19,13 @@ return new class extends Migration
             $table->text('justification');
             $table->date('request_date');
             $table->enum('priority', ['low', 'medium', 'high', 'urgent']);
-            $table->enum('status', ['pending', 'In Checkout', 'Approved', 'Rejected'])->default('pending');
+            $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->json('items');
+            $table->text('rejection_reason')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('department_id');
-            $table->unsignedBigInteger('supplier_id');
-            $table->unsignedBigInteger('client_id');
+            $table->unsignedBigInteger('supplier_id')->nullable();
+            $table->unsignedBigInteger('client_id')->nullable();
             $table->unsignedBigInteger('reviewed_by')->nullable();
             $table->timestamps();
 

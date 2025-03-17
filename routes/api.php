@@ -13,6 +13,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\RequisitionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -160,4 +161,13 @@ Route::middleware('jwt')->prefix('transactions')->group(function () {
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
     // Get transactions by category
     Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
+});
+
+// Requisition routes
+Route::middleware('jwt')->prefix('requisitions')->group(function () {
+    Route::get('/all', [RequisitionController::class, 'getRequisitions']);
+    Route::post('/create', [RequisitionController::class, 'createRequisition']);
+    Route::put('/update/{id}', [RequisitionController::class, 'updateRequisition']);
+    Route::put('/approve/{id}', [RequisitionController::class, 'approveRequisition']);
+    Route::put('/reject/{id}', [RequisitionController::class, 'rejectRequisition']);
 });
