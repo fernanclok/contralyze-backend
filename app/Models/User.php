@@ -81,4 +81,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Get the department this user belongs to.
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
 }

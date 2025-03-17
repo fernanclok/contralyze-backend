@@ -13,6 +13,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\RequisitionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,7 +110,7 @@ Route::middleware('jwt')->prefix('categories')->group(function () {
 });
 
 // Budget Routes
-Route::prefix('budgets')->group(function () {
+Route::middleware('jwt')->prefix('budgets')->group(function () {
     // List all budgets for a specific user
     Route::get('/all', [BudgetController::class, 'index']);
     // Get a specific budget
@@ -124,10 +125,12 @@ Route::prefix('budgets')->group(function () {
     Route::get('/statistics/{user_id}', [BudgetController::class, 'getStatistics']);
     // Get budgets by category
     Route::get('/category/{category_id}', [BudgetController::class, 'getByCategory']);
+    // Get available budget
+    Route::get('/available', [BudgetController::class, 'getAvailableBudget']);
 });
 
 // Budget Request Routes
-Route::prefix('budget-requests')->group(function () {
+Route::middleware('jwt')->prefix('budget-requests')->group(function () {
     // List all budget requests
     Route::get('/all', [BudgetRequestController::class, 'index']);
     // Get a specific budget request
@@ -147,7 +150,7 @@ Route::prefix('budget-requests')->group(function () {
 });
 
 // Transaction Routes
-Route::prefix('transactions')->group(function () {
+Route::middleware('jwt')->prefix('transactions')->group(function () {
     // List all transactions
     Route::get('/all', [TransactionController::class, 'index']);
     // Get a specific transaction
@@ -160,4 +163,13 @@ Route::prefix('transactions')->group(function () {
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
     // Get transactions by category
     Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
+});
+
+// Requisition routes
+Route::middleware('jwt')->prefix('requisitions')->group(function () {
+    Route::get('/all', [RequisitionController::class, 'getRequisitions']);
+    Route::post('/create', [RequisitionController::class, 'createRequisition']);
+    Route::put('/update/{id}', [RequisitionController::class, 'updateRequisition']);
+    Route::put('/approve/{id}', [RequisitionController::class, 'approveRequisition']);
+    Route::put('/reject/{id}', [RequisitionController::class, 'rejectRequisition']);
 });
