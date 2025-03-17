@@ -125,6 +125,8 @@ Route::middleware('jwt')->prefix('budgets')->group(function () {
     Route::get('/statistics/{user_id}', [BudgetController::class, 'getStatistics']);
     // Get budgets by category
     Route::get('/category/{category_id}', [BudgetController::class, 'getByCategory']);
+    // Get available budget
+    Route::get('/available', [BudgetController::class, 'getAvailableBudget']);
 });
 
 // Budget Request Routes
