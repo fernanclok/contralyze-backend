@@ -55,7 +55,7 @@ class BudgetRequestController extends Controller
             return response()->json(['requests' => $requests]);
         } catch (\Exception $e) {
             Log::error('Error en BudgetRequestController@index: ' . $e->getMessage());
-            return response()->json(['error' => 'Error obteniendo las solicitudes: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error obtaining requests: ' . $e->getMessage()], 500);
         }
     }
 
@@ -63,11 +63,31 @@ class BudgetRequestController extends Controller
     {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
-            'requested_amount' => 'required|numeric|min:0',
-            'description' => 'required|string',
+            'requested_amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                'max:999999999.99',
+                'regex:/^\d+(\.\d{1,2})?$/'
+            ],
+            'description' => [
+                'required',
+                'string',
+                'min:10',
+                'max:1000',
+                'regex:/^[a-zA-Z0-9\s\-_.,!?()áéíóúÁÉÍÓÚñÑ]+$/'
+            ],
             'status' => 'sometimes|in:pending,approved,rejected'
+        ], [
+            'requested_amount.regex' => 'Amount must have a maximum of 2 decimal places',
+            'description.regex' => 'Description can only contain letters, numbers, and basic punctuation marks',
+            'description.min' => 'Description must be at least 10 characters long',
+            'description.max' => 'Description cannot exceed 1000 characters'
         ]);
 
+        // Sanitizar la descripción
+        $validated['description'] = strip_tags($validated['description']);
+        
         // Asignar el ID del usuario actual
         $validated['user_id'] = auth()->id();
         
@@ -92,90 +112,82 @@ class BudgetRequestController extends Controller
 
     public function approve($id)
     {
-        // Verificar si el usuario es administrador
-        if (auth()->user()->role !== 'admin') {
+        $user = auth()->user();
+        // Only administrators can approve budget requests
+        if ($user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can approve budget requests.'], 403);
         }
 
         $budgetRequest = BudgetRequest::with(['user.department', 'category'])->findOrFail($id);
         
-        // Si la solicitud ya fue aprobada, retornar error
+        // If request is already approved, return error
         if ($budgetRequest->status === 'approved') {
-            return response()->json(['error' => 'La solicitud ya ha sido aprobada.'], 400);
+            return response()->json(['error' => 'This request has already been approved.'], 400);
         }
         
-        // Obtener el monto solicitado
         $requestedAmount = $budgetRequest->requested_amount;
         
-        // Verificar si hay presupuesto disponible total
+        // Check total available budget for the category
         $totalBudget = \App\Models\Budget::where('status', 'active')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('max_amount');
             
-        // Obtener el total gastado en solicitudes aprobadas
         $totalApproved = BudgetRequest::where('status', 'approved')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('requested_amount');
             
         $totalAvailable = $totalBudget - $totalApproved;
         
+        // Validate total budget availability
         if ($totalAvailable < $requestedAmount) {
             return response()->json([
-                'error' => 'No hay suficiente presupuesto total disponible',
+                'error' => 'Not enough total budget available',
                 'requested' => $requestedAmount,
-                'available' => $totalAvailable
+                'available' => max(0, $totalAvailable),
+                'budget_type' => 'total'
             ], 400);
         }
 
-        // Calcular el presupuesto total restante después de aprobar esta solicitud
-        $remainingTotalBudget = $totalAvailable - $requestedAmount;
-        
-        // Variables para el presupuesto departamental
-        $departmentAvailable = null;
-        $remainingDepartmentBudget = null;
-        $departmentName = null;
-        
-        // Si el usuario tiene un departamento asignado, verificar el presupuesto departamental
-        if ($budgetRequest->user && $budgetRequest->user->department_id) {
-            $departmentId = $budgetRequest->user->department_id;
-            $departmentName = $budgetRequest->user->department->name;
+        // Check department budget if the request belongs to a department
+        if ($budgetRequest->category && $budgetRequest->category->department_id) {
+            $departmentId = $budgetRequest->category->department_id;
             
-            // Obtener el presupuesto disponible para el departamento
-            $departmentUsers = \App\Models\User::where('department_id', $departmentId)->pluck('id');
-            
-            // Presupuesto total asignado al departamento
-            $departmentBudget = \App\Models\Budget::whereIn('user_id', $departmentUsers)
-                ->where('status', 'active')
+            // Get available budget for the department
+            $departmentBudget = \App\Models\Budget::where('status', 'active')
+                ->whereHas('category', function($query) use ($departmentId) {
+                    $query->where('department_id', $departmentId);
+                })
                 ->where('category_id', $budgetRequest->category_id)
                 ->sum('max_amount');
                 
-            // Presupuesto ya aprobado para el departamento
-            $departmentApproved = BudgetRequest::whereIn('user_id', $departmentUsers)
-                ->where('status', 'approved')
+            // Get approved amount for the department
+            $departmentApproved = BudgetRequest::where('status', 'approved')
                 ->where('category_id', $budgetRequest->category_id)
+                ->whereHas('category', function($query) use ($departmentId) {
+                    $query->where('department_id', $departmentId);
+                })
                 ->sum('requested_amount');
                 
             $departmentAvailable = $departmentBudget - $departmentApproved;
             
+            // Validate department budget availability
             if ($departmentAvailable < $requestedAmount) {
                 return response()->json([
-                    'error' => 'No hay suficiente presupuesto departamental disponible',
+                    'error' => 'Not enough department budget available',
                     'requested' => $requestedAmount,
-                    'available' => $departmentAvailable,
-                    'department' => $departmentName
+                    'available' => max(0, $departmentAvailable),
+                    'department' => $budgetRequest->category->department->name ?? 'Unknown Department',
+                    'budget_type' => 'department'
                 ], 400);
             }
-            
-            // Calcular el presupuesto departamental restante después de aprobar esta solicitud
-            $remainingDepartmentBudget = $departmentAvailable - $requestedAmount;
         }
         
-        // Si pasa todas las verificaciones, aprobar la solicitud
+        // If all validations pass, approve the request
         $budgetRequest->status = 'approved';
-        $budgetRequest->reviewed_by = auth()->id();
+        $budgetRequest->reviewed_by = $user->id;
         $budgetRequest->save();
 
-        // Preparar la respuesta con la información del presupuesto restante
+        // Prepare response with remaining budget information
         $responseData = [
             'message' => 'Budget request approved successfully',
             'request' => $budgetRequest,
@@ -183,17 +195,17 @@ class BudgetRequestController extends Controller
                 'requested_amount' => $requestedAmount,
                 'total_budget' => [
                     'before' => $totalAvailable,
-                    'after' => $remainingTotalBudget
+                    'after' => $totalAvailable - $requestedAmount
                 ]
             ]
         ];
-        
-        // Agregar información del departamento si está disponible
-        if ($departmentAvailable !== null) {
+
+        // Add department budget info if available
+        if (isset($departmentAvailable)) {
             $responseData['budget_info']['department_budget'] = [
-                'name' => $departmentName,
+                'name' => $budgetRequest->category->department->name ?? 'Unknown Department',
                 'before' => $departmentAvailable,
-                'after' => $remainingDepartmentBudget
+                'after' => $departmentAvailable - $requestedAmount
             ];
         }
 
@@ -238,8 +250,22 @@ class BudgetRequestController extends Controller
         // Si el usuario no es admin, eliminar el campo 'status' de la validación
         $validationRules = [
             'category_id' => 'sometimes|required|exists:categories,id',
-            'requested_amount' => 'sometimes|required|numeric|min:0',
-            'description' => 'sometimes|required|string',
+            'requested_amount' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0.01',
+                'max:999999999.99',
+                'regex:/^\d+(\.\d{1,2})?$/'
+            ],
+            'description' => [
+                'sometimes',
+                'required',
+                'string',
+                'min:10',
+                'max:1000',
+                'regex:/^[a-zA-Z0-9\s\-_.,!?()áéíóúÁÉÍÓÚñÑ]+$/'
+            ],
         ];
         
         // Solo los admin pueden cambiar el status
@@ -247,11 +273,21 @@ class BudgetRequestController extends Controller
             $validationRules['status'] = 'sometimes|required|in:pending,approved,rejected';
         }
         
-        $validated = $request->validate($validationRules);
+        $validated = $request->validate($validationRules, [
+            'requested_amount.regex' => 'El monto debe tener máximo 2 decimales',
+            'description.regex' => 'La descripción solo puede contener letras, números y signos de puntuación básicos',
+            'description.min' => 'La descripción debe tener al menos 10 caracteres',
+            'description.max' => 'La descripción no puede exceder los 1000 caracteres'
+        ]);
         
         // Si no es admin y está intentando cambiar el status, ignorar ese campo
         if ($user->role !== 'admin' && $request->has('status')) {
             unset($validated['status']);
+        }
+
+        // Sanitizar la descripción si está presente
+        if (isset($validated['description'])) {
+            $validated['description'] = strip_tags($validated['description']);
         }
 
         $budgetRequest->update($validated);

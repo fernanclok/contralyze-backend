@@ -50,7 +50,7 @@ class DepartmentController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || $user->role !== 'admin') {
+        if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
