@@ -16,7 +16,9 @@ class PurchaseRequest extends Model
         'justification',
         'request_date',
         'priority',
-        'status', 
+        'status',
+        'items',
+        'rejection_reason', 
         'user_id',
         'department_id',
         'supplier_id',
@@ -24,9 +26,18 @@ class PurchaseRequest extends Model
         'reviewed_by',
     ];
 
+    protected $casts = [
+        'items' => 'array',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function department()
@@ -42,5 +53,10 @@ class PurchaseRequest extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(PurchaseRequestAttachment::class);
     }
 }

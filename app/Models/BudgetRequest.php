@@ -34,4 +34,19 @@ class BudgetRequest extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    /**
+     * Get all budget requests for a specific department.
+     */
+    public static function getByDepartment($departmentId, $status = null)
+    {
+        $query = self::whereHas('user', function($q) use ($departmentId) {
+            $q->where('department_id', $departmentId);
+        });
+        
+        if ($status) {
+            $query->where('status', $status);
+        }
+        
+        return $query->get();
+    }
 }
