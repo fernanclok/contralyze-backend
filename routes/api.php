@@ -121,7 +121,9 @@ Route::middleware('jwt')->prefix('budgets')->group(function () {
     // Delete a budget
     Route::delete('/{id}', [BudgetController::class, 'destroy']);
     // Get budget statistics
-    Route::get('/statistics/{user_id}', [BudgetController::class, 'getStatistics']);
+    Route::get('/all/statistics', [BudgetController::class, 'getStatistics']);
+    // Get budgets for info card
+    Route::get('/all/info-cards', [BudgetController::class, 'getEmergencyFund']);
     // Get budgets by category
     Route::get('/category/{category_id}', [BudgetController::class, 'getByCategory']);
 });
