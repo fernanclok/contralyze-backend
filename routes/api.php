@@ -168,6 +168,7 @@ Route::middleware('jwt')->prefix('transactions')->group(function () {
 // Requisition routes
 Route::middleware('jwt')->prefix('requisitions')->group(function () {
     Route::get('/all', [RequisitionController::class, 'getRequisitions']);
+    Route::get('/dashboard', [RequisitionController::class, 'requisitionDashboard']);
     Route::post('/create', [RequisitionController::class, 'createRequisition']);
     Route::put('/update/{id}', [RequisitionController::class, 'updateRequisition']);
     Route::put('/approve/{id}', [RequisitionController::class, 'approveRequisition']);

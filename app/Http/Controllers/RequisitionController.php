@@ -72,6 +72,132 @@ class RequisitionController extends Controller
         return response()->json($requisitions);
     }
 
+    public function requisitionDashboard()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+
+        // Calcular el mes y año anterior
+        $previousMonth = $currentMonth - 1;
+        $previousYear = $currentYear;
+
+        if ($previousMonth == 0) {
+            $previousMonth = 12;
+            $previousYear = $currentYear - 1;
+        }
+
+        if ($user->role === 'admin') {
+            // Contar todas las requisiciones del mes actual si el usuario es administrador
+            $totalMonthRequisitions = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->count();
+            $approvedRequisitions = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Approved')
+                ->count();
+            $rejectedRequisitions = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Rejected')
+                ->count();
+            $pendingRequisitions = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Pending')
+                ->count();
+
+            // Obtener las últimas 5 requisiciones creadas en el sistema en el mes actual
+            $last5requisitions = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get();
+
+            // Contar todas las requisiciones del mes anterior
+            $totalPreviousMonthRequisitions = PurchaseRequest::whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->count();
+            $approvedPreviousMonthRequisitions = PurchaseRequest::whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Approved')
+                ->count();
+            $rejectedPreviousMonthRequisitions = PurchaseRequest::whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Rejected')
+                ->count();
+            $pendingPreviousMonthRequisitions = PurchaseRequest::whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Pending')
+                ->count();
+        } else {
+            // Contar las requisiciones del departamento del usuario en el mes actual
+            $totalMonthRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->count();
+            $approvedRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Approved')
+                ->count();
+            $rejectedRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Rejected')
+                ->count();
+            $pendingRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->where('status', 'Pending')
+                ->count();
+
+            // Obtener las últimas 5 requisiciones creadas en el departamento del usuario en el mes actual
+            $last5requisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $currentMonth)
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get();
+
+            // Contar las requisiciones del departamento del usuario en el mes anterior
+            $totalPreviousMonthRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->count();
+            $approvedPreviousMonthRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Approved')
+                ->count();
+            $rejectedPreviousMonthRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Rejected')
+                ->count();
+            $pendingPreviousMonthRequisitions = PurchaseRequest::where('department_id', $user->department_id)
+                ->whereYear('created_at', $previousYear)
+                ->whereMonth('created_at', $previousMonth)
+                ->where('status', 'Pending')
+                ->count();
+        }
+
+        return response()->json([
+            'total_month_requisitions' => $totalMonthRequisitions,
+            'total_previous_month_requisitions' => $totalPreviousMonthRequisitions,
+            'approved_requisitions' => $approvedRequisitions,
+            'approved_previous_month_requisitions' => $approvedPreviousMonthRequisitions,
+            'rejected_requisitions' => $rejectedRequisitions,
+            'rejected_previous_month_requisitions' => $rejectedPreviousMonthRequisitions,
+            'pending_requisitions' => $pendingRequisitions,
+            'pending_previous_month_requisitions' => $pendingPreviousMonthRequisitions,
+            'last_5_requisitions' => $last5requisitions,
+        ]);
+    }
+
     public function createRequisition(Request $request)
     {
         $user = Auth::user();
@@ -85,8 +211,8 @@ class RequisitionController extends Controller
 
         // Contar el número de requisiciones creadas en el año actual
         $requisitionCount = PurchaseRequest::whereYear('created_at', $currentYear)
-        ->where('department_id', $user->department_id)
-        ->count();
+            ->where('department_id', $user->department_id)
+            ->count();
 
         // Generar el UID personalizado
         $requisitionUid = sprintf('REQ-%s-%03d', $currentYear, $requisitionCount + 1);
