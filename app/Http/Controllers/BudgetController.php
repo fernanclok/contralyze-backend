@@ -208,41 +208,41 @@ class BudgetController extends Controller
     public function getEmergencyFund()
     {
         $user = Auth::user();
-    
+
         // Check if the user is an admin
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can view budget statistics.'], 403);
         }
-    
+
         $budgets = Budget::get();
-    
+
         // Calcular los valores actuales
         $EmergencyFund = round($budgets->sum('max_amount') * 0.1, 2); // Asegurarse de que sea numérico
         $TotalBudgetAmount = round($budgets->sum('max_amount'), 2); // Asegurarse de que sea numérico
         $TotalExpenses = round(0, 2); // Placeholder para gastos, asegurarse de que sea numérico
         $LastUpdate = now()->format('Y-m-d');
-    
+
         // Obtener los valores anteriores de la caché
         $previousData = Cache::get('emergency_fund_data', [
             'emergency_fund' => null,
             'total_budget_amount' => null,
             'total_expenses' => null,
         ]);
-    
+
         // Comparar los valores actuales con los anteriores
         $changes = [
             'emergency_fund' => $this->compareValues($previousData['emergency_fund'], $EmergencyFund),
             'total_budget_amount' => $this->compareValues($previousData['total_budget_amount'], $TotalBudgetAmount),
             'total_expenses' => $this->compareValues($previousData['total_expenses'], $TotalExpenses),
         ];
-    
+
         // Guardar los valores actuales en la caché
         Cache::put('emergency_fund_data', [
             'emergency_fund' => $EmergencyFund,
             'total_budget_amount' => $TotalBudgetAmount,
             'total_expenses' => $TotalExpenses,
         ], now()->addHours(1)); // La caché expira en 1 hora
-    
+
         return response()->json([
             'emergency_fund' => $EmergencyFund,
             'total_budget_amount' => $TotalBudgetAmount,
@@ -257,28 +257,42 @@ class BudgetController extends Controller
         $previous = is_numeric($previous) ? (float) $previous : null;
         $current = is_numeric($current) ? (float) $current : null;
 
+        // Obtener el último estado de la caché
+        $lastStatus = Cache::get('last_status', null);
+
         if ($previous === null) {
             return [
-                'status' => 'unchange', // No hay datos anteriores
+                'status' => 'new', // No hay datos anteriores
                 'percentage' => null,
             ];
         }
 
         if ($current > $previous) {
             $percentageChange = (($current - $previous) / $previous) * 100;
+            Cache::put('last_status', 'increased', now()->addHours(3)); // Guardar el estado en la caché
             return [
                 'status' => 'increased',
+                'previous_status' => $lastStatus, // Devolver el último estado
                 'percentage' => number_format($percentageChange, 2),
             ];
         } elseif ($current < $previous) {
             $percentageChange = (($previous - $current) / $previous) * 100;
+            Cache::put('last_status', 'decreased', now()->addHours(3)); // Guardar el estado en la caché
             return [
                 'status' => 'decreased',
+                'previous_status' => $lastStatus, // Devolver el último estado
                 'percentage' => number_format($percentageChange, 2),
+            ];
+        } elseif ($current === $previous) {
+            return [
+                'status' => 'unchanged',
+                'previous_status' => $lastStatus, // Mostrar el último estado registrado
+                'percentage' => 0,
             ];
         } else {
             return [
-                'status' => 'unchanged',
+                'status' => 'error', // Caso inesperado
+                'previous_status' => $lastStatus,
                 'percentage' => 0,
             ];
         }
@@ -304,50 +318,50 @@ class BudgetController extends Controller
         ]);
 
         $categoryId = $validated['category_id'];
-        
+
         // Obtener presupuesto total para la categoría
         $totalBudget = Budget::where('status', 'active')
             ->where('category_id', $categoryId)
             ->sum('max_amount');
-            
+
         // Obtener total aprobado para la categoría
         $totalApproved = BudgetRequest::where('status', 'approved')
             ->where('category_id', $categoryId)
             ->sum('requested_amount');
-            
+
         $availableBudget = $totalBudget - $totalApproved;
-        
+
         $response = [
             'category_id' => $categoryId,
             'total_budget' => $totalBudget,
             'total_approved' => $totalApproved,
             'available_budget' => $availableBudget
         ];
-        
+
         // Si se solicita información de un departamento específico
         if (isset($validated['department_id'])) {
             $departmentId = $validated['department_id'];
-            
+
             // Obtener usuarios del departamento
             $departmentUsers = User::where('department_id', $departmentId)->pluck('id');
-            
+
             // Presupuesto asignado al departamento
             $departmentBudget = Budget::whereIn('user_id', $departmentUsers)
                 ->where('status', 'active')
                 ->where('category_id', $categoryId)
                 ->sum('max_amount');
-                
+
             // Presupuesto ya aprobado para el departamento
             $departmentApproved = BudgetRequest::whereIn('user_id', $departmentUsers)
                 ->where('status', 'approved')
                 ->where('category_id', $categoryId)
                 ->sum('requested_amount');
-                
+
             $departmentAvailable = $departmentBudget - $departmentApproved;
-            
+
             // Obtener información del departamento
             $department = Department::find($departmentId);
-            
+
             $response['department'] = [
                 'id' => $departmentId,
                 'name' => $department ? $department->name : 'Departamento no encontrado',
@@ -356,7 +370,7 @@ class BudgetController extends Controller
                 'available' => $departmentAvailable
             ];
         }
-        
+
         return response()->json($response);
     }
 }
