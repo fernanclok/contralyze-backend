@@ -297,6 +297,7 @@ class BudgetController extends Controller
             ];
         }
     }
+
     public function getByCategory($category_id)
     {
         $budgets = Budget::where('category_id', $category_id)
