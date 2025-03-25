@@ -13,6 +13,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\RequisitionController;
 
 /*
@@ -165,6 +166,24 @@ Route::middleware('jwt')->prefix('transactions')->group(function () {
     Route::put('/{id}', [TransactionController::class, 'update']);
     // Delete a transaction
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
+    // Get transaction summary for dashboard
+    Route::get('/summary', [TransactionController::class, 'summary']);
+});
+
+// Invoice Routes
+Route::middleware('jwt')->prefix('invoices')->group(function () {
+    // List all invoices
+    Route::get('/all', [InvoiceController::class, 'index']);
+    // Get a specific invoice
+    Route::get('/{id}', [InvoiceController::class, 'show']);
+    // Create a new invoice
+    Route::post('/create', [InvoiceController::class, 'store']);
+    // Update an invoice
+    Route::put('/{id}', [InvoiceController::class, 'update']);
+    // Delete an invoice
+    Route::delete('/{id}', [InvoiceController::class, 'destroy']);
+    // Get invoices for a specific transaction
+    Route::get('/transaction/{transactionId}', [InvoiceController::class, 'getByTransaction']);
     // Get transactions by category
     Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
 
