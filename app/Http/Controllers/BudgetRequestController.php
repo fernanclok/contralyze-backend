@@ -17,21 +17,21 @@ class BudgetRequestController extends Controller
         try {
             // Consulta inicial con relaciones
             $query = BudgetRequest::query()->with(['category', 'reviewer', 'user']);
-            
+
             // Verificar si se solicitan relaciones específicas
             if ($request->has('include')) {
                 $includes = explode(',', $request->input('include'));
                 $query->with($includes);
             }
-            
+
             // Si se proporciona un user_id, filtrar por ese usuario
             if ($request->has('user_id')) {
                 $query->where('user_id', $request->user_id);
             }
-            
+
             $requests = $query->orderBy('request_date', 'desc')
                 ->get();
-                
+
             // Transformar los resultados para asegurar que se incluye toda la información del usuario
             $requests = $requests->map(function ($request) {
                 // Si no hay información del usuario, obtenerla manualmente
@@ -70,17 +70,17 @@ class BudgetRequestController extends Controller
 
         // Asignar el ID del usuario actual
         $validated['user_id'] = auth()->id();
-        
+
         // Establecer estado pendiente por defecto
         if (!isset($validated['status'])) {
             $validated['status'] = 'pending';
         }
-        
+
         // Establecer fecha de solicitud
         $validated['request_date'] = now();
-        
+
         $budgetRequest = BudgetRequest::create($validated);
-        
+
         // Cargar las relaciones para devolverlas en la respuesta
         $budgetRequest->load(['category', 'user']);
 
@@ -98,27 +98,27 @@ class BudgetRequestController extends Controller
         }
 
         $budgetRequest = BudgetRequest::with(['user.department', 'category'])->findOrFail($id);
-        
+
         // Si la solicitud ya fue aprobada, retornar error
         if ($budgetRequest->status === 'approved') {
             return response()->json(['error' => 'La solicitud ya ha sido aprobada.'], 400);
         }
-        
+
         // Obtener el monto solicitado
         $requestedAmount = $budgetRequest->requested_amount;
-        
+
         // Verificar si hay presupuesto disponible total
         $totalBudget = \App\Models\Budget::where('status', 'active')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('max_amount');
-            
+
         // Obtener el total gastado en solicitudes aprobadas
         $totalApproved = BudgetRequest::where('status', 'approved')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('requested_amount');
-            
+
         $totalAvailable = $totalBudget - $totalApproved;
-        
+
         if ($totalAvailable < $requestedAmount) {
             return response()->json([
                 'error' => 'No hay suficiente presupuesto total disponible',
@@ -129,34 +129,34 @@ class BudgetRequestController extends Controller
 
         // Calcular el presupuesto total restante después de aprobar esta solicitud
         $remainingTotalBudget = $totalAvailable - $requestedAmount;
-        
+
         // Variables para el presupuesto departamental
         $departmentAvailable = null;
         $remainingDepartmentBudget = null;
         $departmentName = null;
-        
+
         // Si el usuario tiene un departamento asignado, verificar el presupuesto departamental
-        if ($budgetRequest->user && $budgetRequest->user->department_id) {
-            $departmentId = $budgetRequest->user->department_id;
+        if ($budgetRequest->user && $budgetRequest->user->department) {
+            $departmentId = $budgetRequest->user->department->id;
             $departmentName = $budgetRequest->user->department->name;
-            
+
             // Obtener el presupuesto disponible para el departamento
             $departmentUsers = \App\Models\User::where('department_id', $departmentId)->pluck('id');
-            
+
             // Presupuesto total asignado al departamento
             $departmentBudget = \App\Models\Budget::whereIn('user_id', $departmentUsers)
                 ->where('status', 'active')
                 ->where('category_id', $budgetRequest->category_id)
                 ->sum('max_amount');
-                
+
             // Presupuesto ya aprobado para el departamento
             $departmentApproved = BudgetRequest::whereIn('user_id', $departmentUsers)
                 ->where('status', 'approved')
                 ->where('category_id', $budgetRequest->category_id)
                 ->sum('requested_amount');
-                
+
             $departmentAvailable = $departmentBudget - $departmentApproved;
-            
+
             if ($departmentAvailable < $requestedAmount) {
                 return response()->json([
                     'error' => 'No hay suficiente presupuesto departamental disponible',
@@ -165,11 +165,11 @@ class BudgetRequestController extends Controller
                     'department' => $departmentName
                 ], 400);
             }
-            
+
             // Calcular el presupuesto departamental restante después de aprobar esta solicitud
             $remainingDepartmentBudget = $departmentAvailable - $requestedAmount;
         }
-        
+
         // Si pasa todas las verificaciones, aprobar la solicitud
         $budgetRequest->status = 'approved';
         $budgetRequest->reviewed_by = auth()->id();
@@ -187,7 +187,7 @@ class BudgetRequestController extends Controller
                 ]
             ]
         ];
-        
+
         // Agregar información del departamento si está disponible
         if ($departmentAvailable !== null) {
             $responseData['budget_info']['department_budget'] = [
@@ -229,26 +229,26 @@ class BudgetRequestController extends Controller
     {
         $budgetRequest = BudgetRequest::findOrFail($id);
         $user = auth()->user();
-        
+
         // Solo permitir que los admin o el creador de la solicitud puedan actualizarla
         if ($user->role !== 'admin' && $budgetRequest->user_id !== $user->id) {
             return response()->json(['error' => 'You are not authorized to update this budget request.'], 403);
         }
-        
+
         // Si el usuario no es admin, eliminar el campo 'status' de la validación
         $validationRules = [
             'category_id' => 'sometimes|required|exists:categories,id',
             'requested_amount' => 'sometimes|required|numeric|min:0',
             'description' => 'sometimes|required|string',
         ];
-        
+
         // Solo los admin pueden cambiar el status
         if ($user->role === 'admin') {
             $validationRules['status'] = 'sometimes|required|in:pending,approved,rejected';
         }
-        
+
         $validated = $request->validate($validationRules);
-        
+
         // Si no es admin y está intentando cambiar el status, ignorar ese campo
         if ($user->role !== 'admin' && $request->has('status')) {
             unset($validated['status']);
@@ -266,12 +266,12 @@ class BudgetRequestController extends Controller
     {
         $budgetRequest = BudgetRequest::findOrFail($id);
         $user = auth()->user();
-        
+
         // Solo permitir que los admin o el creador de la solicitud puedan eliminarla
         if ($user->role !== 'admin' && $budgetRequest->user_id !== $user->id) {
             return response()->json(['error' => 'You are not authorized to delete this budget request.'], 403);
         }
-        
+
         $budgetRequest->delete();
 
         return response()->json([
@@ -283,6 +283,16 @@ class BudgetRequestController extends Controller
     {
         $requests = BudgetRequest::where('user_id', $user_id)
             ->where('status', $status)
+            ->with(['category', 'reviewer'])
+            ->orderBy('request_date', 'desc')
+            ->paginate(10); // Added pagination
+
+        return response()->json(['requests' => $requests]);
+    }
+
+    public function getRequestsByUser($user_id)
+    {
+        $requests = BudgetRequest::where('user_id', $user_id)
             ->with(['category', 'reviewer'])
             ->orderBy('request_date', 'desc')
             ->paginate(10); // Added pagination

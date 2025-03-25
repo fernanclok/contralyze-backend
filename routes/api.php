@@ -149,6 +149,8 @@ Route::middleware('jwt')->prefix('budget-requests')->group(function () {
     Route::put('/{id}/reject', [BudgetRequestController::class, 'reject']);
     // Get pending requests
     Route::get('/pending/{user_id}', [BudgetRequestController::class, 'getPendingRequests']);
+    // Get all requests by user
+    // Route::get('/all/byuser/{user_id}', [BudgetRequestController::class, 'getRequestsByUser']);
 });
 
 // Transaction Routes
@@ -165,6 +167,9 @@ Route::middleware('jwt')->prefix('transactions')->group(function () {
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
     // Get transactions by category
     Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
+
+    // Get statics for transactions
+    Route::get('/all/statics', [TransactionController::class, 'totalAmountByMonthAndYear']);
 });
 
 // Requisition routes
