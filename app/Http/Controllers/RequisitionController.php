@@ -249,6 +249,51 @@ class RequisitionController extends Controller
         ], 201);
     }
 
+    public function updateRequisition(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $requisition = PurchaseRequest::find($id);
+
+        if (!$requisition) {
+            return response()->json(['error' => 'Requisition not found'], 404);
+        }
+
+        if ($requisition->status !== 'Pending') {
+            return response()->json(['error' => 'Requisition cannot be updated'], 400);
+        }
+
+        $requisition->title = $request->title;
+        $requisition->justification = $request->justification;
+        $requisition->total_amount = $request->total_amount;
+        $requisition->request_date = $request->request_date;
+        $requisition->priority = $request->priority;
+        $requisition->items = $request->items;
+        $requisition->supplier_id = $request->supplier_id;
+        $requisition->client_id = $request->client_id;
+        $requisition->save();
+
+        // manejo de archivos adjuntos
+        if ($request->hasFile('attachment')) {
+            foreach ($request->file('attachment') as $attachment) {
+                $path = $attachment->store('attachments', 'public');
+                PurchaseRequestAttachment::create([
+                    'attachment' => $path,
+                    'purchase_request_id' => $requisition->id,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Requisition updated successfully',
+            'requisition' => $requisition,
+        ]);
+    }
+
     public function approveRequisition(Request $request, $id)
     {
         $user = Auth::user();

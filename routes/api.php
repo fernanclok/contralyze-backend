@@ -59,8 +59,7 @@ Route::middleware('jwt')->prefix('departments')->group(function () {
     Route::post('/create', [DepartmentController::class, 'createDepartment']);
     // Get all departments
     Route::get('/all', [DepartmentController::class, 'allDepartments']);
-    // Route::get('/all/{id}', [DepartmentController::class, 'allDepartmentsByUser']);
-    Route::delete('/delete/{id}', [DepartmentController::class, 'deleteDepartment']);
+    // Update a department
     Route::put('/update/{id}', [DepartmentController::class, 'updateDepartment']);
 });
 
