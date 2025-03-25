@@ -29,6 +29,25 @@ class Budget extends Model
     }
 
     /**
+     * Obtener el departamento a través de la categoría
+     */
+    public function department()
+    {
+        // La relación correcta es a través de la categoría
+        return $this->belongsTo(Department::class)->withDefault(function ($department) {
+            return $this->category ? $this->category->department : $department;
+        });
+    }
+
+    /**
+     * Obtener el ID del departamento a través de la categoría
+     */
+    public function getDepartmentIdAttribute()
+    {
+        return $this->category ? $this->category->department_id : null;
+    }
+
+    /**
      * Calcula el presupuesto disponible basado en solicitudes aprobadas.
      */
     public function getAvailableAmount()
@@ -38,7 +57,8 @@ class Budget extends Model
             ->where('category_id', $this->category_id)
             ->sum('requested_amount');
             
-        return $this->max_amount - $approvedRequests;
+        // Asegurar que no devolvemos valores negativos
+        return max(0, $this->max_amount - $approvedRequests);
     }
 
     /**
@@ -46,12 +66,11 @@ class Budget extends Model
      */
     public static function getAvailableForDepartment($departmentId, $categoryId = null)
     {
-        // Obtener usuarios del departamento
-        $departmentUsers = User::where('department_id', $departmentId)->pluck('id');
-        
         // Presupuesto total para el departamento
-        $query = self::whereIn('user_id', $departmentUsers)
-            ->where('status', 'active');
+        $query = self::where('status', 'active')
+            ->whereHas('category', function($q) use ($departmentId) {
+                $q->where('department_id', $departmentId);
+            });
             
         if ($categoryId) {
             $query->where('category_id', $categoryId);
@@ -60,8 +79,10 @@ class Budget extends Model
         $totalBudget = $query->sum('max_amount');
         
         // Solicitudes aprobadas para el departamento
-        $approvedQuery = BudgetRequest::whereIn('user_id', $departmentUsers)
-            ->where('status', 'approved');
+        $approvedQuery = BudgetRequest::where('status', 'approved')
+            ->whereHas('user', function($q) use ($departmentId) {
+                $q->where('department_id', $departmentId);
+            });
             
         if ($categoryId) {
             $approvedQuery->where('category_id', $categoryId);
@@ -69,6 +90,7 @@ class Budget extends Model
         
         $totalApproved = $approvedQuery->sum('requested_amount');
         
-        return $totalBudget - $totalApproved;
+        // Asegurar que no devolvemos valores negativos
+        return max(0, $totalBudget - $totalApproved);
     }
 }

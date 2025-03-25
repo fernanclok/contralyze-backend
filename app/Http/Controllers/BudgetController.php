@@ -215,18 +215,20 @@ class BudgetController extends Controller
         }
 
         $budgets = Budget::get();
+
         // Calcular los valores actuales
-        $EmergencyFund = number_format($budgets->sum('max_amount') * 0.1, 2);
-        $TotalBudgetAmount = number_format($budgets->sum('max_amount'), 2);
-        $TotalExpenses = number_format(0, 2);
+        $EmergencyFund = round($budgets->sum('max_amount') * 0.1, 2); // Asegurarse de que sea numérico
+        $TotalBudgetAmount = round($budgets->sum('max_amount'), 2); // Asegurarse de que sea numérico
+        $TotalExpenses = round(0, 2); // Placeholder para gastos, asegurarse de que sea numérico
         $LastUpdate = now()->format('Y-m-d');
 
-        // Obtener los valores anteriores de la cache
+        // Obtener los valores anteriores de la caché
         $previousData = Cache::get('emergency_fund_data', [
             'emergency_fund' => null,
             'total_budget_amount' => null,
             'total_expenses' => null,
         ]);
+
         // Comparar los valores actuales con los anteriores
         $changes = [
             'emergency_fund' => $this->compareValues($previousData['emergency_fund'], $EmergencyFund),
@@ -234,14 +236,12 @@ class BudgetController extends Controller
             'total_expenses' => $this->compareValues($previousData['total_expenses'], $TotalExpenses),
         ];
 
-
         // Guardar los valores actuales en la caché
         Cache::put('emergency_fund_data', [
             'emergency_fund' => $EmergencyFund,
             'total_budget_amount' => $TotalBudgetAmount,
             'total_expenses' => $TotalExpenses,
         ], now()->addHours(1)); // La caché expira en 1 hora
-
 
         return response()->json([
             'emergency_fund' => $EmergencyFund,
@@ -253,16 +253,48 @@ class BudgetController extends Controller
     }
     private function compareValues($previous, $current)
     {
+        // Convertir valores a numéricos si no lo son
+        $previous = is_numeric($previous) ? (float) $previous : null;
+        $current = is_numeric($current) ? (float) $current : null;
+
+        // Obtener el último estado de la caché
+        $lastStatus = Cache::get('last_status', null);
+
         if ($previous === null) {
-            return 'new'; // No hay datos anteriores
+            return [
+                'status' => 'new', // No hay datos anteriores
+                'percentage' => null,
+            ];
         }
 
         if ($current > $previous) {
-            return 'increased';
+            $percentageChange = (($current - $previous) / $previous) * 100;
+            Cache::put('last_status', 'increased', now()->addHours(3)); // Guardar el estado en la caché
+            return [
+                'status' => 'increased',
+                'previous_status' => $lastStatus, // Devolver el último estado
+                'percentage' => number_format($percentageChange, 2),
+            ];
         } elseif ($current < $previous) {
-            return 'decreased';
+            $percentageChange = (($previous - $current) / $previous) * 100;
+            Cache::put('last_status', 'decreased', now()->addHours(3)); // Guardar el estado en la caché
+            return [
+                'status' => 'decreased',
+                'previous_status' => $lastStatus, // Devolver el último estado
+                'percentage' => number_format($percentageChange, 2),
+            ];
+        } elseif ($current === $previous) {
+            return [
+                'status' => 'unchanged',
+                'previous_status' => $lastStatus, // Mostrar el último estado registrado
+                'percentage' => 0,
+            ];
         } else {
-            return 'unchanged';
+            return [
+                'status' => 'error', // Caso inesperado
+                'previous_status' => $lastStatus,
+                'percentage' => 0,
+            ];
         }
     }
 
