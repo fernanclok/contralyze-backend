@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -298,5 +299,21 @@ class TransactionController extends Controller
                 'message' => 'Error retrieving transaction summary: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    // Dame los montos totales de las transacciones por mes y año
+    public function totalAmountByMonthAndYear()
+    {
+        $transactions = \App\Models\Transaction::query()
+            ->selectRaw('
+                DATE_PART(\'year\', transaction_date) AS year,
+                DATE_PART(\'month\', transaction_date) AS month,
+                SUM(amount) AS total
+            ')
+            ->groupByRaw('DATE_PART(\'year\', transaction_date), DATE_PART(\'month\', transaction_date)')
+            ->orderByRaw('DATE_PART(\'year\', transaction_date), DATE_PART(\'month\', transaction_date)')
+            ->get();
+    
+        return response()->json($transactions);
     }
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\RequisitionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -122,7 +123,9 @@ Route::middleware('jwt')->prefix('budgets')->group(function () {
     // Delete a budget
     Route::delete('/{id}', [BudgetController::class, 'destroy']);
     // Get budget statistics
-    Route::get('/statistics/{user_id}', [BudgetController::class, 'getStatistics']);
+    Route::get('/all/statistics', [BudgetController::class, 'getStatistics']);
+    // Get budgets for info card
+    Route::get('/all/info-cards', [BudgetController::class, 'getEmergencyFund']);
     // Get budgets by category
     Route::get('/category/{category_id}', [BudgetController::class, 'getByCategory']);
     // Get available budget
@@ -147,6 +150,8 @@ Route::middleware('jwt')->prefix('budget-requests')->group(function () {
     Route::put('/{id}/reject', [BudgetRequestController::class, 'reject']);
     // Get pending requests
     Route::get('/pending/{user_id}', [BudgetRequestController::class, 'getPendingRequests']);
+    // Get all requests by user
+    // Route::get('/all/byuser/{user_id}', [BudgetRequestController::class, 'getRequestsByUser']);
 });
 
 // Transaction Routes
@@ -179,4 +184,19 @@ Route::middleware('jwt')->prefix('invoices')->group(function () {
     Route::delete('/{id}', [InvoiceController::class, 'destroy']);
     // Get invoices for a specific transaction
     Route::get('/transaction/{transactionId}', [InvoiceController::class, 'getByTransaction']);
+    // Get transactions by category
+    Route::get('/category/{category_id}', [TransactionController::class, 'getByCategory']);
+
+    // Get statics for transactions
+    Route::get('/all/statics', [TransactionController::class, 'totalAmountByMonthAndYear']);
+});
+
+// Requisition routes
+Route::middleware('jwt')->prefix('requisitions')->group(function () {
+    Route::get('/all', [RequisitionController::class, 'getRequisitions']);
+    Route::get('/dashboard', [RequisitionController::class, 'requisitionDashboard']);
+    Route::post('/create', [RequisitionController::class, 'createRequisition']);
+    Route::put('/update/{id}', [RequisitionController::class, 'updateRequisition']);
+    Route::put('/approve/{id}', [RequisitionController::class, 'approveRequisition']);
+    Route::put('/reject/{id}', [RequisitionController::class, 'rejectRequisition']);
 });
