@@ -15,6 +15,12 @@ class ClientController extends Controller
     
     public function createClient(Request $request)
     {
+        if(Client::where('email', $request->email)->exists()) {
+            return response()->json([
+                'errors' => ['server' => 'The email is already registered'],
+            ], 422);
+        }
+        
         $client = new Client();
         $client->name = $request->name;
         $client->email = $request->email;

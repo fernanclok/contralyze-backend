@@ -16,6 +16,12 @@ class SupplierController extends Controller
     // Create a new supplier
     public function createSupplier(Request $request)
     {
+        if(Supplier::where('email', $request->email)->exists()) {
+            return response()->json([
+                'errors' => ['server' => 'The email is already registered'] ,
+            ], 422);
+        }
+
         $supplier = new Supplier();
         $supplier->name = $request->name;
         $supplier->email = $request->email;
