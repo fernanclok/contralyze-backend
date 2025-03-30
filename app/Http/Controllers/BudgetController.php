@@ -224,7 +224,7 @@ class BudgetController extends Controller
             
             $response['department'] = [
                 'id' => $departmentId,
-                'name' => $department ? $department->name : 'Departamento no encontrado',
+                'name' => $department ? $department->name : 'Department not found',
                 'budget' => $departmentBudget,
                 'approved' => $departmentApproved,
                 'available' => $departmentAvailable
