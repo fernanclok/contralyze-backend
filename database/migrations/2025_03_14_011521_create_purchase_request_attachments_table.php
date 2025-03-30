@@ -11,16 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('purchase_request_items', function (Blueprint $table) {
+        Schema::create('purchase_request_attachments', function (Blueprint $table) {
             $table->id();
+            $table->string('attachment');
             $table->unsignedBigInteger('purchase_request_id');
-            $table->string('product_name');
-            $table->integer('quantity')->check('quantity > 0');
-            $table->decimal('unit_price', 10, 2)->check('unit_price >= 0');
-            $table->decimal('total_price', 10, 2)->storedAs('quantity * unit_price');
-            $table->timestamps();
-
             $table->foreign('purchase_request_id')->references('id')->on('purchase_requests')->onDelete('cascade');
+            $table->timestamps();
         });
     }
 
@@ -29,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('purchase_request_items');
+        Schema::dropIfExists('purchase_request_attachments');
     }
 };

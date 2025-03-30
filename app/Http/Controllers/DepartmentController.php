@@ -54,9 +54,7 @@ class DepartmentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $departments = Department::where('company_id', $user->company_id)
-            ->withCount('users')
-            ->get();
+        $departments = Department::all();
 
         return response()->json($departments);
     }
