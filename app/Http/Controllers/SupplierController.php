@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Department;
 
 class SupplierController extends Controller
 {
@@ -16,13 +17,31 @@ class SupplierController extends Controller
     // Create a new supplier
     public function createSupplier(Request $request)
     {
+        $user = Auth::user();
+
+        $department = Department::find($user->department_id);
+
+        if (!$department || !$department->isActive) {
+            return response()->json([
+                'errors' => [
+                    'server' => 'Your department is inactive. You cannot create a Supplier.'
+                ]
+            ], 403);
+        }
+
+        if(Supplier::where('email', $request->email)->exists()) {
+            return response()->json([
+                'errors' => ['server' => 'The email is already registered'] ,
+            ], 422);
+        }
+
         $supplier = new Supplier();
         $supplier->name = $request->name;
         $supplier->email = $request->email;
         $supplier->phone = $request->phone;
         $supplier->address = $request->address;
         $supplier->isActive = true;
-        $supplier->created_by = Auth::id();
+        $supplier->created_by = $user->id;
         $supplier->save();
 
         return response()->json([

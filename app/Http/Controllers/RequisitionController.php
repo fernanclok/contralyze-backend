@@ -7,6 +7,7 @@ use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestAttachment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\Department;
 
 
 class RequisitionController extends Controller
@@ -186,6 +187,7 @@ class RequisitionController extends Controller
         }
 
         return response()->json([
+            'id' => 1,
             'total_month_requisitions' => $totalMonthRequisitions,
             'total_previous_month_requisitions' => $totalPreviousMonthRequisitions,
             'approved_requisitions' => $approvedRequisitions,
@@ -206,16 +208,29 @@ class RequisitionController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        $department = Department::find($user->department_id);
+
+        if (!$department || !$department->isActive) {
+            return response()->json([
+                'errors' => [
+                    'server' => 'Your department is inactive. You cannot create a requisition.'
+                ]
+            ], 403);
+        }
+
         // Obtener el año actual
         $currentYear = date('Y');
 
-        // Contar el número de requisiciones creadas en el año actual
+        // Contar el número de requisiciones creadas por el departamento en el año actual
         $requisitionCount = PurchaseRequest::whereYear('created_at', $currentYear)
             ->where('department_id', $user->department_id)
             ->count();
 
-        // Generar el UID personalizado
-        $requisitionUid = sprintf('REQ-%s-%03d', $currentYear, $requisitionCount + 1);
+        // Obtener iniciales del departamento
+        $departmentInitials = strtoupper(substr($department->name, 0, 1));
+
+        // Generar el UID personalizado con el número correcto para el departamento
+        $requisitionUid = sprintf('REQ-%s-%s-%03d', $departmentInitials, $currentYear, $requisitionCount + 1);
 
         $requisition = new PurchaseRequest();
         $requisition->requisition_uid = $requisitionUid;
