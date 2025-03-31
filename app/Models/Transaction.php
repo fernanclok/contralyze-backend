@@ -21,7 +21,8 @@ class Transaction extends Model
         'transaction_date',
         'status',
         'payment_method',
-        'reference_number'
+        'reference_number',
+        'deleted_at'
     ];
 
     protected $casts = [

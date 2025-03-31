@@ -9,6 +9,7 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Transaction;
 
 class BudgetController extends Controller
 {
@@ -215,11 +216,17 @@ class BudgetController extends Controller
         }
 
         $budgets = Budget::get();
+        $transactions = Transaction::get();
+        $expenses = $transactions->where('type', 'expense')
+            ->where('status', 'completed');
+
+        // obtener las budgets que tengan como status active
+        $active_budgets = $budgets->where('status', 'active');
 
         // Calcular los valores actuales
-        $EmergencyFund = round($budgets->sum('max_amount') * 0.1, 2); // Asegurarse de que sea numérico
+        $EmergencyFund = round($active_budgets->sum('max_amount') * 0.1, 2); // Asegurarse de que sea numérico
         $TotalBudgetAmount = round($budgets->sum('max_amount'), 2); // Asegurarse de que sea numérico
-        $TotalExpenses = round(0, 2); // Placeholder para gastos, asegurarse de que sea numérico
+        $TotalExpenses = round($expenses->sum('amount'), 2); // Placeholder para gastos, asegurarse de que sea numérico
         $LastUpdate = now()->format('Y-m-d');
 
         // Obtener los valores anteriores de la caché
@@ -267,6 +274,13 @@ class BudgetController extends Controller
             ];
         }
 
+        if ($previous == 0) {
+            return [
+                'status' => 'new', // División por cero
+                'percentage' => 0,
+            ];
+        }
+
         if ($current > $previous) {
             $percentageChange = (($current - $previous) / $previous) * 100;
             Cache::put('last_status', 'increased', now()->addHours(3)); // Guardar el estado en la caché
@@ -282,12 +296,6 @@ class BudgetController extends Controller
                 'status' => 'decreased',
                 'previous_status' => $lastStatus, // Devolver el último estado
                 'percentage' => number_format($percentageChange, 2),
-            ];
-        } elseif ($current === $previous) {
-            return [
-                'status' => 'unchanged',
-                'previous_status' => $lastStatus, // Mostrar el último estado registrado
-                'percentage' => 0,
             ];
         } else {
             return [
@@ -311,7 +319,7 @@ class BudgetController extends Controller
      * Obtener el presupuesto disponible para una categoría específica
      */
     public function getAvailableBudget(Request $request)
-    {
+    {       
         // Validar los parámetros
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
@@ -365,7 +373,7 @@ class BudgetController extends Controller
 
             $response['department'] = [
                 'id' => $departmentId,
-                'name' => $department ? $department->name : 'Departamento no encontrado',
+                'name' => $department ? $department->name : 'Department not found',
                 'budget' => $departmentBudget,
                 'approved' => $departmentApproved,
                 'available' => $departmentAvailable
