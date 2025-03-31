@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Client;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Department;
 
 class ClientController extends Controller
 {
@@ -15,6 +16,18 @@ class ClientController extends Controller
     
     public function createClient(Request $request)
     {
+        $user = Auth::user();
+
+        $department = Department::find($user->department_id);
+
+        if (!$department || !$department->isActive) {
+            return response()->json([
+                'errors' => [
+                    'server' => 'Your department is inactive. You cannot create a client.'
+                ]
+            ], 403);
+        }
+
         if(Client::where('email', $request->email)->exists()) {
             return response()->json([
                 'errors' => ['server' => 'The email is already registered'],
@@ -27,7 +40,7 @@ class ClientController extends Controller
         $client->phone = $request->phone;
         $client->address = $request->address;
         $client->isActive = true;
-        $client->created_by = Auth::id();
+        $client->created_by = $user->id;
         $client->save();
 
         return response()->json([
