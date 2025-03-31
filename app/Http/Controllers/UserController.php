@@ -74,7 +74,10 @@ class UserController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $users = User::where('company_id', $user->company_id)->get();
+        $users = User::where('company_id', $user->company_id)
+        ->with('department:id,name')
+        ->orderBy('created_at', 'asc')
+        ->get();
 
         return response()->json($users);
     }
