@@ -31,6 +31,7 @@ class AdminUserSeeder extends Seeder
         $department = Department::create([
             'name' => 'Admin',
             'description' => 'Admin department',
+            'isActive' => true,
             'company_id' => $company->id,
         ]);
 
