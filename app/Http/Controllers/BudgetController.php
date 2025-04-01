@@ -319,7 +319,7 @@ class BudgetController extends Controller
      * Obtener el presupuesto disponible para una categoría específica
      */
     public function getAvailableBudget(Request $request)
-    {       
+    {
         // Validar los parámetros
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
