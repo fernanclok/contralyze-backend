@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Transaction;
+use Pusher\Pusher;
 
 class BudgetController extends Controller
 {
@@ -54,6 +55,22 @@ class BudgetController extends Controller
         }
 
         $budget = Budget::create($validated);
+   // Configurar Pusher
+   $pusher = new Pusher(
+    env('PUSHER_APP_KEY'),
+    env('PUSHER_APP_SECRET'),
+    env('PUSHER_APP_ID'),
+    [
+        'cluster' => env('PUSHER_APP_CLUSTER'),
+        'useTLS' => true,
+    ]
+);
+
+// Enviar datos a Pusher
+$pusher->trigger('budgets-channel', 'budget-created', [
+    'message' => 'A new budget has been created',
+    'budget' => $budget
+]);
 
         // Cargar la relación category para devolverla en la respuesta
         $budget->load('category');

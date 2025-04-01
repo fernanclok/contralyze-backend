@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Events\PusherEvent;
-use SebastianBergmann\Type\TrueType;
+use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
@@ -127,7 +127,7 @@ class TransactionController extends Controller
             $transaction->load(['category', 'user', 'supplier', 'client']);
 
             // Enviar evento Pusher
-            event(new PusherEvent('transactions', 'transaction-created', $transaction));
+            event(new PusherEvent(['transactions'], 'transaction-created', $transaction));
 
             DB::commit();
 
@@ -258,7 +258,7 @@ class TransactionController extends Controller
             $transaction->load(['category', 'user', 'supplier', 'client', 'invoices']);
             
             // Enviar evento Pusher
-            event(new PusherEvent('transactions', 'transaction-updated', $transaction));
+            event(new PusherEvent(['transactions'], 'transaction-updated', $transaction));
             
             return response()->json([
                 'success' => true,
@@ -293,7 +293,7 @@ class TransactionController extends Controller
             $transaction->delete();
             
             // Enviar evento Pusher
-            event(new PusherEvent('transactions', 'transaction-deleted', ['id' => $id]));
+            event(new PusherEvent(['transactions'], 'transaction-deleted', ['id' => $id]));
             
             return response()->json([
                 'success' => true,
