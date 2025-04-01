@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Events\PusherEvent;
 
 class InvoiceController extends Controller
 {
@@ -120,6 +121,9 @@ class InvoiceController extends Controller
             // Load transaction relationship
             $invoice->load('transaction');
 
+            // Enviar evento Pusher
+            event(new PusherEvent('invoices', 'invoice-created', $invoice));
+
             return response()->json([
                 'success' => true,
                 'data' => $invoice,
@@ -213,6 +217,9 @@ class InvoiceController extends Controller
             // Load transaction relationship
             $invoice->load('transaction');
 
+            // Enviar evento Pusher
+            event(new PusherEvent('invoices', 'invoice-updated', $invoice));
+
             return response()->json([
                 'success' => true,
                 'data' => $invoice,
@@ -243,6 +250,9 @@ class InvoiceController extends Controller
             
             $invoice->delete();
             
+            // Enviar evento Pusher
+            event(new PusherEvent('invoices', 'invoice-deleted', ['id' => $id]));
+
             return response()->json([
                 'success' => true,
                 'message' => 'Invoice deleted successfully'

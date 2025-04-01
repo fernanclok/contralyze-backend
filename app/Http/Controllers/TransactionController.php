@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use App\Events\PusherEvent;
 
 class TransactionController extends Controller
 {
@@ -89,14 +90,14 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            DB::beginTransaction();
+        DB::beginTransaction();
 
+        try {
             $validatedData = $request->validate([
-                'amount' => 'required|numeric',
-                'description' => 'nullable|string',
-                'category_id' => 'nullable|exists:categories,id',
+                'amount' => 'required|numeric|min:0.01',
+                'description' => 'nullable|string|max:1000',
                 'type' => 'required|in:income,expense,transfer',
+                'category_id' => 'nullable|exists:categories,id',
                 'client_id' => 'nullable|exists:clients,id',
                 'supplier_id' => 'nullable|exists:suppliers,id',
                 'transaction_date' => 'required|date',
@@ -120,6 +121,12 @@ class TransactionController extends Controller
             $transaction->category_id = $validatedData['category_id'] ?? null;
 
             $transaction->save();
+
+            // Cargar relaciones para la respuesta
+            $transaction->load(['category', 'user', 'supplier', 'client']);
+
+            // Enviar evento Pusher
+            event(new PusherEvent('transactions', 'transaction-created', $transaction));
 
             DB::commit();
 
@@ -198,39 +205,60 @@ class TransactionController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
+                    'message' => 'Validation failed',
                     'errors' => $validator->errors()
                 ], 422);
             }
 
-            $transaction->update($validator->validated());
-            
-            // Load relationships
-            $transaction->load(['category', 'user', 'supplier', 'client', 'invoices']);
-
-            try {
-                // Enviar evento a Pusher
-                $this->pushEvent('transactions', 'transaction-updated', [
-                    'id' => $transaction->id,
-                    'type' => $transaction->type,
-                    'amount' => $transaction->amount,
-                    'description' => $transaction->description,
-                    'category_id' => $transaction->category_id,
-                    'supplier_id' => $transaction->supplier_id,
-                    'client_id' => $transaction->client_id,
-                    'transaction_date' => $transaction->transaction_date,
-                    'status' => $transaction->status,
-                    'payment_method' => $transaction->payment_method,
-                    'reference_number' => $transaction->reference_number,
-                    'category' => $transaction->category,
-                    'supplier' => $transaction->supplier,
-                    'client' => $transaction->client,
-                    'invoices' => $transaction->invoices
-                ]);
-                Log::info('TransactionController@update: Pusher event sent successfully');
-            } catch (\Exception $e) {
-                Log::error('TransactionController@update: Error sending Pusher event: ' . $e->getMessage());
+            // Update fields if provided
+            if ($request->has('type')) {
+                $transaction->type = $request->type;
             }
-
+            
+            if ($request->has('amount')) {
+                $transaction->amount = $request->amount;
+            }
+            
+            if ($request->has('description')) {
+                $transaction->description = $request->description;
+            }
+            
+            if ($request->has('category_id')) {
+                $transaction->category_id = $request->category_id;
+            }
+            
+            if ($request->has('supplier_id')) {
+                $transaction->supplier_id = $request->supplier_id;
+            }
+            
+            if ($request->has('client_id')) {
+                $transaction->client_id = $request->client_id;
+            }
+            
+            if ($request->has('transaction_date')) {
+                $transaction->transaction_date = $request->transaction_date;
+            }
+            
+            if ($request->has('status')) {
+                $transaction->status = $request->status;
+            }
+            
+            if ($request->has('payment_method')) {
+                $transaction->payment_method = $request->payment_method;
+            }
+            
+            if ($request->has('reference_number')) {
+                $transaction->reference_number = $request->reference_number;
+            }
+            
+            $transaction->save();
+            
+            // Cargar relaciones para la respuesta
+            $transaction->load(['category', 'user', 'supplier', 'client', 'invoices']);
+            
+            // Enviar evento Pusher
+            event(new PusherEvent('transactions', 'transaction-updated', $transaction));
+            
             return response()->json([
                 'success' => true,
                 'data' => $transaction,
@@ -252,17 +280,19 @@ class TransactionController extends Controller
     {
         try {
             $transaction = Transaction::findOrFail($id);
+            
+            // Check if transaction has invoices
+            if ($transaction->invoices()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete transaction with associated invoices'
+                ], 400);
+            }
+            
             $transaction->delete();
             
-            try {
-                // Enviar evento a Pusher
-                $this->pushEvent('transactions', 'transaction-deleted', [
-                    'id' => $id
-                ]);
-                Log::info('TransactionController@destroy: Pusher event sent successfully');
-            } catch (\Exception $e) {
-                Log::error('TransactionController@destroy: Error sending Pusher event: ' . $e->getMessage());
-            }
+            // Enviar evento Pusher
+            event(new PusherEvent('transactions', 'transaction-deleted', ['id' => $id]));
             
             return response()->json([
                 'success' => true,
@@ -357,21 +387,5 @@ class TransactionController extends Controller
                 'message' => 'Error retrieving transaction summary: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    // Dame los montos totales de las transacciones por mes y año
-    public function totalAmountByMonthAndYear()
-    {
-        $transactions = \App\Models\Transaction::query()
-            ->selectRaw('
-                DATE_PART(\'year\', transaction_date) AS year,
-                DATE_PART(\'month\', transaction_date) AS month,
-                SUM(amount) AS total
-            ')
-            ->groupByRaw('DATE_PART(\'year\', transaction_date), DATE_PART(\'month\', transaction_date)')
-            ->orderByRaw('DATE_PART(\'year\', transaction_date), DATE_PART(\'month\', transaction_date)')
-            ->get();
-    
-        return response()->json($transactions);
     }
 }
