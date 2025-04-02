@@ -10,21 +10,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Transaction;
-use Pusher\Pusher;
+use App\Traits\UsesPusher;
 
 class BudgetController extends Controller
 {
+    use UsesPusher;
+
     public function index(Request $request)
     {
         $query = Budget::query()->with(['category', 'user']);
 
-        // Si se proporciona un user_id, filtrar por ese usuario
+        // If a user_id is provided, filter by that user
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        $budgets = $query->orderBy('created_at', 'desc')
-            ->get();
+        $budgets = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json(['budgets' => $budgets]);
     }
@@ -33,7 +34,7 @@ class BudgetController extends Controller
     {
         $user = Auth::user();
 
-        // Verificar si el usuario es administrador
+        // Check if the user is an administrator
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can create budgets.'], 403);
         }
@@ -46,33 +47,23 @@ class BudgetController extends Controller
             'status' => 'sometimes|in:active,inactive,expired'
         ]);
 
-        // Asignar el ID del usuario actual
+        // Assign the current user's ID
         $validated['user_id'] = $user->id;
 
-        // Establecer estado activo por defecto
+        // Set default status to active
         if (!isset($validated['status'])) {
             $validated['status'] = 'active';
         }
 
         $budget = Budget::create($validated);
-   // Configurar Pusher
-   $pusher = new Pusher(
-    env('PUSHER_APP_KEY'),
-    env('PUSHER_APP_SECRET'),
-    env('PUSHER_APP_ID'),
-    [
-        'cluster' => env('PUSHER_APP_CLUSTER'),
-        'useTLS' => true,
-    ]
-);
 
-// Enviar datos a Pusher
-$pusher->trigger('budgets-channel', 'budget-created', [
-    'message' => 'A new budget has been created',
-    'budget' => $budget
-]);
+        // Use the trait method to send the event
+        $this->pushEvent('private-budgets', 'budget-created', [
+            'message' => 'A new budget has been created',
+            'budget' => $budget
+        ]);
 
-        // Cargar la relación category para devolverla en la respuesta
+        // Load the category relationship to return it in the response
         $budget->load('category');
 
         return response()->json([
@@ -112,7 +103,7 @@ $pusher->trigger('budgets-channel', 'budget-created', [
     {
         $user = Auth::user();
 
-        // Verificar si el usuario es administrador
+        // Check if the user is an administrator
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can update budgets.'], 403);
         }
@@ -129,6 +120,11 @@ $pusher->trigger('budgets-channel', 'budget-created', [
         $budget->update($validated);
         $budget->load('category');
 
+        $this->pushEvent('private-budgets', 'budget-updated', [
+            'message' => 'A budget has been updated',
+            'budget' => $budget
+        ]);
+
         return response()->json([
             'message' => 'Budget updated successfully',
             'budget' => $budget
@@ -139,13 +135,18 @@ $pusher->trigger('budgets-channel', 'budget-created', [
     {
         $user = Auth::user();
 
-        // Verificar si el usuario es administrador
+        // Check if the user is an administrator
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can delete budgets.'], 403);
         }
 
         $budget = Budget::findOrFail($id);
         $budget->delete();
+
+        $this->pushEvent('private-budgets', 'budget-deleted', [
+            'message' => 'A budget has been deleted',
+            'id' => $id
+        ]);
 
         return response()->json(['message' => 'Budget deleted successfully']);
     }
@@ -176,12 +177,11 @@ $pusher->trigger('budgets-channel', 'budget-created', [
         return response()->json(['budgets' => $budgets]);
     }
 
-
     public function getStatistics()
     {
         $user = Auth::user();
 
-        // Check if the user is an admin
+        // Check if the user is an administrator
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can view budget statistics.'], 403);
         }
@@ -194,8 +194,7 @@ $pusher->trigger('budgets-channel', 'budget-created', [
         $totalExpiredBudgets = $budgets->where('status', 'expired')->count();
         $totalBudgetAmount = $budgets->sum('max_amount');
 
-
-        // Preparar datos para la gráfica
+        // Prepare data for the chart
         $chartData = $budgets->groupBy('category_id')->map(function ($categoryBudgets) {
             $categoryName = $categoryBudgets->first()->category->name;
             $totalBudgets = $categoryBudgets->count();
@@ -227,7 +226,7 @@ $pusher->trigger('budgets-channel', 'budget-created', [
     {
         $user = Auth::user();
 
-        // Check if the user is an admin
+        // Check if the user is an administrator
         if (!$user || $user->role !== 'admin') {
             return response()->json(['error' => 'Unauthorized. Only administrators can view budget statistics.'], 403);
         }
@@ -237,35 +236,35 @@ $pusher->trigger('budgets-channel', 'budget-created', [
         $expenses = $transactions->where('type', 'expense')
             ->where('status', 'completed');
 
-        // obtener las budgets que tengan como status active
+        // Get budgets with active status
         $active_budgets = $budgets->where('status', 'active');
 
-        // Calcular los valores actuales
-        $EmergencyFund = round($active_budgets->sum('max_amount') * 0.1, 2); // Asegurarse de que sea numérico
-        $TotalBudgetAmount = round($budgets->sum('max_amount'), 2); // Asegurarse de que sea numérico
-        $TotalExpenses = round($expenses->sum('amount'), 2); // Placeholder para gastos, asegurarse de que sea numérico
+        // Calculate current values
+        $EmergencyFund = round($active_budgets->sum('max_amount') * 0.1, 2);
+        $TotalBudgetAmount = round($budgets->sum('max_amount'), 2);
+        $TotalExpenses = round($expenses->sum('amount'), 2);
         $LastUpdate = now()->format('Y-m-d');
 
-        // Obtener los valores anteriores de la caché
+        // Get previous values from cache
         $previousData = Cache::get('emergency_fund_data', [
             'emergency_fund' => null,
             'total_budget_amount' => null,
             'total_expenses' => null,
         ]);
 
-        // Comparar los valores actuales con los anteriores
+        // Compare current values with previous ones
         $changes = [
             'emergency_fund' => $this->compareValues($previousData['emergency_fund'], $EmergencyFund),
             'total_budget_amount' => $this->compareValues($previousData['total_budget_amount'], $TotalBudgetAmount),
             'total_expenses' => $this->compareValues($previousData['total_expenses'], $TotalExpenses),
         ];
 
-        // Guardar los valores actuales en la caché
+        // Save current values to cache
         Cache::put('emergency_fund_data', [
             'emergency_fund' => $EmergencyFund,
             'total_budget_amount' => $TotalBudgetAmount,
             'total_expenses' => $TotalExpenses,
-        ], now()->addHours(1)); // La caché expira en 1 hora
+        ], now()->addHours(1));
 
         return response()->json([
             'emergency_fund' => $EmergencyFund,
@@ -275,48 +274,47 @@ $pusher->trigger('budgets-channel', 'budget-created', [
             'changes' => $changes,
         ]);
     }
+
     private function compareValues($previous, $current)
     {
-        // Convertir valores a numéricos si no lo son
         $previous = is_numeric($previous) ? (float) $previous : null;
         $current = is_numeric($current) ? (float) $current : null;
 
-        // Obtener el último estado de la caché
         $lastStatus = Cache::get('last_status', null);
 
         if ($previous === null) {
             return [
-                'status' => 'new', // No hay datos anteriores
+                'status' => 'new',
                 'percentage' => null,
             ];
         }
 
         if ($previous == 0) {
             return [
-                'status' => 'new', // División por cero
+                'status' => 'new',
                 'percentage' => 0,
             ];
         }
 
         if ($current > $previous) {
             $percentageChange = (($current - $previous) / $previous) * 100;
-            Cache::put('last_status', 'increased', now()->addHours(3)); // Guardar el estado en la caché
+            Cache::put('last_status', 'increased', now()->addHours(3));
             return [
                 'status' => 'increased',
-                'previous_status' => $lastStatus, // Devolver el último estado
+                'previous_status' => $lastStatus,
                 'percentage' => number_format($percentageChange, 2),
             ];
         } elseif ($current < $previous) {
             $percentageChange = (($previous - $current) / $previous) * 100;
-            Cache::put('last_status', 'decreased', now()->addHours(3)); // Guardar el estado en la caché
+            Cache::put('last_status', 'decreased', now()->addHours(3));
             return [
                 'status' => 'decreased',
-                'previous_status' => $lastStatus, // Devolver el último estado
+                'previous_status' => $lastStatus,
                 'percentage' => number_format($percentageChange, 2),
             ];
         } else {
             return [
-                'status' => 'error', // Caso inesperado
+                'status' => 'error',
                 'previous_status' => $lastStatus,
                 'percentage' => 0,
             ];
@@ -332,12 +330,8 @@ $pusher->trigger('budgets-channel', 'budget-created', [
         return response()->json(['budgets' => $budgets]);
     }
 
-    /**
-     * Obtener el presupuesto disponible para una categoría específica
-     */
     public function getAvailableBudget(Request $request)
-    {       
-        // Validar los parámetros
+    {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'department_id' => 'sometimes|exists:departments,id'
@@ -345,12 +339,10 @@ $pusher->trigger('budgets-channel', 'budget-created', [
 
         $categoryId = $validated['category_id'];
 
-        // Obtener presupuesto total para la categoría
         $totalBudget = Budget::where('status', 'active')
             ->where('category_id', $categoryId)
             ->sum('max_amount');
 
-        // Obtener total aprobado para la categoría
         $totalApproved = BudgetRequest::where('status', 'approved')
             ->where('category_id', $categoryId)
             ->sum('requested_amount');
@@ -364,20 +356,16 @@ $pusher->trigger('budgets-channel', 'budget-created', [
             'available_budget' => $availableBudget
         ];
 
-        // Si se solicita información de un departamento específico
         if (isset($validated['department_id'])) {
             $departmentId = $validated['department_id'];
 
-            // Obtener usuarios del departamento
             $departmentUsers = User::where('department_id', $departmentId)->pluck('id');
 
-            // Presupuesto asignado al departamento
             $departmentBudget = Budget::whereIn('user_id', $departmentUsers)
                 ->where('status', 'active')
                 ->where('category_id', $categoryId)
                 ->sum('max_amount');
 
-            // Presupuesto ya aprobado para el departamento
             $departmentApproved = BudgetRequest::whereIn('user_id', $departmentUsers)
                 ->where('status', 'approved')
                 ->where('category_id', $categoryId)
@@ -385,7 +373,6 @@ $pusher->trigger('budgets-channel', 'budget-created', [
 
             $departmentAvailable = $departmentBudget - $departmentApproved;
 
-            // Obtener información del departamento
             $department = Department::find($departmentId);
 
             $response['department'] = [

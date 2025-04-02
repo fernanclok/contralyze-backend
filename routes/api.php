@@ -15,6 +15,8 @@ use App\Http\Controllers\BudgetRequestController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\RequisitionController;
+use Illuminate\Support\Facades\Broadcast;
+use App\Http\Controllers\PusherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -207,3 +209,5 @@ Route::middleware('jwt')->prefix('requisitions')->group(function () {
     Route::put('/approve/{id}', [RequisitionController::class, 'approveRequisition']);
     Route::put('/reject/{id}', [RequisitionController::class, 'rejectRequisition']);
 });
+
+Route::post('/pusher/auth', [PusherController::class, 'authenticate']);

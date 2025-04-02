@@ -121,8 +121,12 @@ class InvoiceController extends Controller
             // Load transaction relationship
             $invoice->load('transaction');
 
-            // Enviar evento Pusher
-            event(new PusherEvent('invoices', 'invoice-created', $invoice));
+            // Enviar evento Pusher al crear una factura
+            event(new PusherEvent([
+                'channel' => 'invoices',
+                'event' => 'invoice-created',
+                'data' => $invoice
+            ]));
 
             return response()->json([
                 'success' => true,
@@ -217,8 +221,12 @@ class InvoiceController extends Controller
             // Load transaction relationship
             $invoice->load('transaction');
 
-            // Enviar evento Pusher
-            event(new PusherEvent('invoices', 'invoice-updated', $invoice));
+            // Enviar evento Pusher al actualizar una factura
+            event(new PusherEvent([
+                'channel' => 'invoices',
+                'event' => 'invoice-updated',
+                'data' => $invoice
+            ]));
 
             return response()->json([
                 'success' => true,
@@ -250,8 +258,12 @@ class InvoiceController extends Controller
             
             $invoice->delete();
             
-            // Enviar evento Pusher
-            event(new PusherEvent('invoices', 'invoice-deleted', ['id' => $id]));
+            // Enviar evento Pusher al eliminar una factura
+            event(new PusherEvent([
+                'channel' => 'invoices',
+                'event' => 'invoice-deleted',
+                'data' => ['id' => $id]
+            ]));
 
             return response()->json([
                 'success' => true,
