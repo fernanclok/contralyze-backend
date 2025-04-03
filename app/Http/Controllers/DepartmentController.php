@@ -51,28 +51,20 @@ class DepartmentController extends Controller
     public function allDepartments()
     {
         $user = Auth::user();
-    
-        if (!$user || $user->role !== 'admin') {
+
+        // Si el usuario no está autenticado, devolver error
+        if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-    
-        // Obtener los departamentos con el conteo de usuarios
-        $departments = Department::withCount('users')->get();
-    
-        // Transformar los datos para incluir el conteo de usuarios
-        $departments = $departments->map(function ($department) {
-            return [
-                'id' => $department->id,
-                'name' => $department->name,
-                'description' => $department->description,
-                'isActive' => $department->isActive,
-                'company_id' => $department->company_id,
-                'created_at' => $department->created_at,
-                'updated_at' => $department->updated_at,
-                'users_count' => $department->users_count, // Conteo de usuarios
-            ];
-        });
-    
+
+        // Si el usuario es administrador, devolver todos los departamentos
+        if ($user->role === 'admin') {
+            $departments = Department::withCount('users')->get();
+        } else {
+            // Si no es administrador, devolver solo el departamento asociado al usuario
+            $departments = Department::where('id', $user->department_id)->get();
+        }
+
         return response()->json($departments);
     }
 
