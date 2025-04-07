@@ -58,9 +58,10 @@ class BudgetController extends Controller
         $budget = Budget::create($validated);
 
         // Use the trait method to send the event
-        $this->pushEvent('private-budgets', 'budget-created', [
+        // Cambiar el canal a 'budgets' (público)
+        $this->pushEvent('budgets', 'budget-created', [
             'message' => 'A new budget has been created',
-            'budget' => $budget
+            'budget' => $budget->load('category') // Asegúrate de cargar la relación 'category'
         ]);
 
         // Load the category relationship to return it in the response
@@ -120,9 +121,10 @@ class BudgetController extends Controller
         $budget->update($validated);
         $budget->load('category');
 
-        $this->pushEvent('private-budgets', 'budget-updated', [
+        // Cambiar el canal a 'budgets' (público)
+        $this->pushEvent('budgets', 'budget-updated', [
             'message' => 'A budget has been updated',
-            'budget' => $budget
+            'budget' => $budget->load('category') // Asegúrate de cargar la relación 'category'
         ]);
 
         return response()->json([
@@ -143,7 +145,8 @@ class BudgetController extends Controller
         $budget = Budget::findOrFail($id);
         $budget->delete();
 
-        $this->pushEvent('private-budgets', 'budget-deleted', [
+        // Cambiar el canal a 'budgets' (público)
+        $this->pushEvent('budgets', 'budget-deleted', [
             'message' => 'A budget has been deleted',
             'id' => $id
         ]);

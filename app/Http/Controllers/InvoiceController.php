@@ -123,9 +123,12 @@ class InvoiceController extends Controller
 
             // Enviar evento Pusher al crear una factura
             event(new PusherEvent([
-                'channel' => 'invoices',
+                'channel' => 'transactions',
                 'event' => 'invoice-created',
-                'data' => $invoice
+                'data' => [
+                    'transaction_id' => $request->transaction_id,
+                    'invoice' => $invoice
+                ]
             ]));
 
             return response()->json([

@@ -127,7 +127,9 @@ class TransactionController extends Controller
             $transaction->load(['category', 'user', 'supplier', 'client']);
 
             // Enviar evento Pusher
-            event(new PusherEvent(['transactions'], 'transaction-created', $transaction));
+            event(new PusherEvent(['transactions'], 'transaction-created', [
+                'transaction' => $transaction // Asegúrate de incluir los datos de la transacción
+            ]));
 
             DB::commit();
 
@@ -242,6 +244,17 @@ class TransactionController extends Controller
             
             if ($request->has('status')) {
                 $transaction->status = $request->status;
+
+                // Emitir eventos específicos para los estados "completed" y "cancelled"
+                if ($transaction->status === 'completed') {
+                    event(new PusherEvent('transactions', 'transaction-completed', [
+                        'transaction' => $transaction
+                    ]));
+                } elseif ($transaction->status === 'cancelled') {
+                    event(new PusherEvent('transactions', 'transaction-cancelled', [
+                        'transaction' => $transaction
+                    ]));
+                }
             }
             
             if ($request->has('payment_method')) {
@@ -258,7 +271,9 @@ class TransactionController extends Controller
             $transaction->load(['category', 'user', 'supplier', 'client', 'invoices']);
             
             // Enviar evento Pusher
-            event(new PusherEvent(['transactions'], 'transaction-updated', $transaction));
+            event(new PusherEvent('transactions', 'transaction-updated', [
+                'transaction' => $transaction
+            ]));
             
             return response()->json([
                 'success' => true,
@@ -293,7 +308,9 @@ class TransactionController extends Controller
             $transaction->delete();
             
             // Enviar evento Pusher
-            event(new PusherEvent(['transactions'], 'transaction-deleted', ['id' => $id]));
+            event(new PusherEvent('transactions', 'transaction-deleted', [
+                'id' => $id // Solo envía el ID para eventos de eliminación
+            ]));
             
             return response()->json([
                 'success' => true,

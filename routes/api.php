@@ -211,3 +211,8 @@ Route::middleware('jwt')->prefix('requisitions')->group(function () {
 });
 
 Route::post('/pusher/auth', [PusherController::class, 'authenticate']);
+
+// Ruta para autenticar canales privados de Pusher
+Route::post('/pusher/auth', function (Illuminate\Http\Request $request) {
+    return Broadcast::auth($request);
+});
