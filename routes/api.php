@@ -167,6 +167,14 @@ Route::middleware('jwt')->prefix('transactions')->group(function () {
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
     // Get transaction summary for dashboard
     Route::get('/summary', [TransactionController::class, 'summary']);
+    // get transactions by month and year
+    Route::get('/all/statics', [TransactionController::class, 'getBymonthYear']);
+    // Get transactions by depto
+    Route::get('/department/statics', [TransactionController::class, 'getDepartmentTransactionTotals']);
+    // get las ten transactions
+    Route::get('/last/transactions', [TransactionController::class, 'getLastTransactions']);
+    // Get transactions by department
+    Route::get('/last/department', [TransactionController::class, 'getLastTransactionBYdepartment']);
 });
 
 // Invoice Routes

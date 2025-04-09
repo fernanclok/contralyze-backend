@@ -21,21 +21,21 @@ class BudgetRequestController extends Controller
         try {
             // Consulta inicial con relaciones
             $query = BudgetRequest::query()->with(['category', 'reviewer', 'user']);
-            
+
             // Verificar si se solicitan relaciones específicas
             if ($request->has('include')) {
                 $includes = explode(',', $request->input('include'));
                 $query->with($includes);
             }
-            
+
             // Si se proporciona un user_id, filtrar por ese usuario
             if ($request->has('user_id')) {
                 $query->where('user_id', $request->user_id);
             }
-            
+
             $requests = $query->orderBy('request_date', 'desc')
                 ->get();
-                
+
             // Transformar los resultados para asegurar que se incluya toda la información del usuario
             $requests = $requests->map(function ($request) {
                 // Si no hay información del usuario, obtenerla manualmente
@@ -67,7 +67,7 @@ class BudgetRequestController extends Controller
     {
         try {
             Log::info('BudgetRequestController@store: Starting request validation');
-            
+
             $validated = $request->validate([
                 'category_id' => 'required|exists:categories,id',
                 'requested_amount' => [
@@ -96,29 +96,29 @@ class BudgetRequestController extends Controller
 
             // Sanitizar la descripción
             $validated['description'] = strip_tags($validated['description']);
-            
+
             // Asignar el ID del usuario actual
             $user = auth()->user();
             if (!$user) {
                 Log::error('BudgetRequestController@store: No authenticated user found');
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
-            
+
             $validated['user_id'] = $user->id;
             Log::info('BudgetRequestController@store: User assigned', ['user_id' => $user->id]);
-            
+
             // Establecer estado pendiente por defecto
             if (!isset($validated['status'])) {
                 $validated['status'] = 'pending';
             }
-            
+
             // Establecer fecha de solicitud
             $validated['request_date'] = now();
-            
+
             Log::info('BudgetRequestController@store: Creating budget request', ['data' => $validated]);
-            
+
             $budgetRequest = BudgetRequest::create($validated);
-            
+
             // Cargar las relaciones para devolverlas en la respuesta
             $budgetRequest->load(['category', 'user']);
 
@@ -139,7 +139,6 @@ class BudgetRequestController extends Controller
                 'message' => 'Budget request created successfully',
                 'request' => $budgetRequest
             ], 201);
-            
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('BudgetRequestController@store: Validation error', ['errors' => $e->errors()]);
             throw $e;
@@ -148,6 +147,7 @@ class BudgetRequestController extends Controller
             return response()->json(['error' => 'Error creating budget request: ' . $e->getMessage()], 500);
         }
     }
+    // Removed misplaced route definition
 
     public function approve($id)
     {
@@ -158,25 +158,25 @@ class BudgetRequestController extends Controller
         }
 
         $budgetRequest = BudgetRequest::with(['user.department', 'category'])->findOrFail($id);
-        
+
         // If request is already approved, return error
         if ($budgetRequest->status === 'approved') {
             return response()->json(['error' => 'This request has already been approved.'], 400);
         }
-        
+
         $requestedAmount = $budgetRequest->requested_amount;
-        
+
         // Check total available budget for the category
         $totalBudget = \App\Models\Budget::where('status', 'active')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('max_amount');
-            
+
         $totalApproved = BudgetRequest::where('status', 'approved')
             ->where('category_id', $budgetRequest->category_id)
             ->sum('requested_amount');
-            
+
         $totalAvailable = $totalBudget - $totalApproved;
-        
+
         // Validate total budget availability
         if ($totalAvailable < $requestedAmount) {
             return response()->json([
@@ -190,25 +190,25 @@ class BudgetRequestController extends Controller
         // Check department budget if the request belongs to a department
         if ($budgetRequest->category && $budgetRequest->category->department_id) {
             $departmentId = $budgetRequest->category->department_id;
-            
+
             // Get available budget for the department
             $departmentBudget = \App\Models\Budget::where('status', 'active')
-                ->whereHas('category', function($query) use ($departmentId) {
+                ->whereHas('category', function ($query) use ($departmentId) {
                     $query->where('department_id', $departmentId);
                 })
                 ->where('category_id', $budgetRequest->category_id)
                 ->sum('max_amount');
-                
+
             // Get approved amount for the department
             $departmentApproved = BudgetRequest::where('status', 'approved')
                 ->where('category_id', $budgetRequest->category_id)
-                ->whereHas('category', function($query) use ($departmentId) {
+                ->whereHas('category', function ($query) use ($departmentId) {
                     $query->where('department_id', $departmentId);
                 })
                 ->sum('requested_amount');
-                
+
             $departmentAvailable = $departmentBudget - $departmentApproved;
-            
+
             // Validate department budget availability
             if ($departmentAvailable < $requestedAmount) {
                 return response()->json([
@@ -220,7 +220,7 @@ class BudgetRequestController extends Controller
                 ], 400);
             }
         }
-        
+
         // If all validations pass, approve the request
         $budgetRequest->status = 'approved';
         $budgetRequest->reviewed_by = $user->id;
@@ -260,7 +260,7 @@ class BudgetRequestController extends Controller
     {
         try {
             Log::info('BudgetRequestController@reject: Starting request rejection', ['id' => $id]);
-            
+
             // Verificar si el usuario es administrador
             $user = auth()->user();
             if ($user->role !== 'admin') {
@@ -272,13 +272,13 @@ class BudgetRequestController extends Controller
             }
 
             $budgetRequest = BudgetRequest::with(['category.department', 'user', 'reviewer'])->findOrFail($id);
-            
+
             // Verificar si ya está rechazada
             if ($budgetRequest->status === 'rejected') {
                 Log::info('BudgetRequestController@reject: Request already rejected', ['id' => $id]);
                 return response()->json(['error' => 'Budget request is already rejected.'], 400);
             }
-            
+
             // Verificar si ya está aprobada
             if ($budgetRequest->status === 'approved') {
                 Log::info('BudgetRequestController@reject: Cannot reject approved request', ['id' => $id]);
@@ -307,13 +307,12 @@ class BudgetRequestController extends Controller
                 'message' => 'Budget request rejected successfully',
                 'request' => $budgetRequest
             ]);
-            
         } catch (\Exception $e) {
             Log::error('BudgetRequestController@reject: Error rejecting request', [
                 'id' => $id,
                 'error' => $e->getMessage()
             ]);
-            
+
             return response()->json([
                 'error' => 'Error rejecting budget request: ' . $e->getMessage()
             ], 500);
@@ -331,12 +330,12 @@ class BudgetRequestController extends Controller
     {
         $budgetRequest = BudgetRequest::findOrFail($id);
         $user = auth()->user();
-        
+
         // Solo permitir que los admin o el creador de la solicitud puedan actualizarla
         if ($user->role !== 'admin' && $budgetRequest->user_id !== $user->id) {
             return response()->json(['error' => 'You are not authorized to update this budget request.'], 403);
         }
-        
+
         // Si el usuario no es admin, eliminar el campo 'status' de la validación
         $validationRules = [
             'category_id' => 'sometimes|required|exists:categories,id',
@@ -357,19 +356,19 @@ class BudgetRequestController extends Controller
                 'regex:/^[a-zA-Z0-9\s\-_.,!?()áéíóúÁÉÍÓÚñÑ]+$/'
             ],
         ];
-        
+
         // Solo los admin pueden cambiar el status
         if ($user->role === 'admin') {
             $validationRules['status'] = 'sometimes|required|in:pending,approved,rejected';
         }
-        
+
         $validated = $request->validate($validationRules, [
             'requested_amount.regex' => 'El monto debe tener máximo 2 decimales',
             'description.regex' => 'La descripción solo puede contener letras, números y signos de puntuación básicos',
             'description.min' => 'La descripción debe tener al menos 10 caracteres',
             'description.max' => 'La descripción no puede exceder los 1000 caracteres'
         ]);
-        
+
         // Si no es admin y está intentando cambiar el status, ignorar ese campo
         if ($user->role !== 'admin' && $request->has('status')) {
             unset($validated['status']);
@@ -397,12 +396,12 @@ class BudgetRequestController extends Controller
     {
         $budgetRequest = BudgetRequest::findOrFail($id);
         $user = auth()->user();
-        
+
         // Solo permitir que los admin o el creador de la solicitud puedan eliminarla
         if ($user->role !== 'admin' && $budgetRequest->user_id !== $user->id) {
             return response()->json(['error' => 'You are not authorized to delete this budget request.'], 403);
         }
-        
+
         $budgetRequest->delete();
 
         return response()->json([

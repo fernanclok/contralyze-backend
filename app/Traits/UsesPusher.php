@@ -15,6 +15,12 @@ trait UsesPusher
     {
         try {
             $this->getPusher()->trigger($channel, $event, $data);
+                    // Registrar en los logs
+            \Log::info("Evento enviado a Pusher", [
+                'channel' => $channel,
+                'event' => $event,
+                'data' => $data,
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error pushing event: ' . $e->getMessage(), [
                 'channel' => $channel,

@@ -63,6 +63,9 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log de datos recibidos para depuración
+            \Log::info('Request para crear invoice:', $request->all());
+            
             $validator = Validator::make($request->all(), [
                 'transaction_id' => 'required|exists:transactions,id',
                 'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
@@ -70,10 +73,11 @@ class InvoiceController extends Controller
                 'invoice_number' => 'nullable|string|max:100',
                 'due_date' => 'nullable|date',
                 'notes' => 'nullable|string|max:1000',
-                'status' => 'nullable|string|in:active,cancelled'
+                'status' => 'nullable|string|in:pending,paid,overdue,draft'
             ]);
 
             if ($validator->fails()) {
+                \Log::error('Validación fallida:', $validator->errors()->toArray());
                 return response()->json([
                     'success' => false,
                     'errors' => $validator->errors()
@@ -82,6 +86,7 @@ class InvoiceController extends Controller
             
             // Verify transaction exists and user has access
             $transaction = Transaction::findOrFail($request->transaction_id);
+            \Log::info('Transacción encontrada:', ['id' => $transaction->id]);
             
             // Handle file upload
             if ($request->hasFile('file')) {
@@ -89,7 +94,9 @@ class InvoiceController extends Controller
                 $filename = Str::random(20) . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $path = $file->storeAs('invoices', $filename, 'public');
                 $fileUrl = Storage::url($path);
+                \Log::info('Archivo guardado:', ['url' => $fileUrl]);
             } else {
+                \Log::error('No se encontró archivo en la petición.');
                 return response()->json([
                     'success' => false,
                     'message' => 'No file was uploaded'
@@ -104,10 +111,11 @@ class InvoiceController extends Controller
                 'invoice_number' => $request->invoice_number,
                 'due_date' => $request->due_date,
                 'notes' => $request->notes,
-                'status' => $request->status ?? 'active'
+                'status' => $request->status ?? 'pending'
             ]);
             
             $invoice->save();
+            \Log::info('Invoice creada con éxito:', ['id' => $invoice->id]);
             
             // Load transaction relationship
             $invoice->load('transaction');
@@ -118,7 +126,11 @@ class InvoiceController extends Controller
                 'message' => 'Invoice uploaded successfully'
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Error in InvoiceController@store: ' . $e->getMessage());
+            \Log::error('Error al crear invoice:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error uploading invoice: ' . $e->getMessage()
@@ -163,7 +175,7 @@ class InvoiceController extends Controller
                 'invoice_number' => 'nullable|string|max:100',
                 'due_date' => 'nullable|date',
                 'notes' => 'nullable|string|max:1000',
-                'status' => 'nullable|string|in:active,cancelled'
+                'status' => 'nullable|string|in:pending,paid,overdue,draft'
             ]);
 
             if ($validator->fails()) {
