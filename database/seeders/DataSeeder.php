@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use App\Models\PurchaseRequest; // Asegúrate de importar el modelo PurchaseRequest
+use App\Models\Department;
 
 class DataSeeder extends Seeder
 {
@@ -12,7 +14,6 @@ class DataSeeder extends Seeder
     {
         // Crear departamentos
         DB::table('departments')->insert([
-            ['name' => 'Administración', 'description' => 'Departamento de administración general', 'company_id' => 1],
             ['name' => 'Tecnología', 'description' => 'Desarrollo y mantenimiento de sistemas', 'company_id' => 1],
             ['name' => 'Marketing', 'description' => 'Publicidad y estrategias de marca', 'company_id' => 1],
             ['name' => 'Recursos Humanos', 'description' => 'Gestión del talento y bienestar laboral', 'company_id' => 1],
@@ -58,30 +59,53 @@ class DataSeeder extends Seeder
 
         // Insertar requisiciones
         for ($i = 0; $i < 30; $i++) {
+            // Obtener el año actual
+            $currentYear = date('Y');
+
+            // Obtener un departamento aleatorio
+            $departmentId = rand(1, 4);
+            $department = Department::find($departmentId);
+
+            // Contar el número de requisiciones creadas por el departamento en el año actual
+            $requisitionCount = PurchaseRequest::whereYear('created_at', $currentYear)
+                ->where('department_id', $departmentId)
+                ->count();
+
+            // Obtener iniciales del departamento
+            $departmentInitials = strtoupper(substr($department->name, 0, 1));
+
+            // Generar el UID personalizado con el número correcto para el departamento
+            $requisitionUid = sprintf('REQ-%s-%s-%03d', $departmentInitials, $currentYear, $requisitionCount + 1);
+
+            // Generar los items
+            $items = [
+                ['item' => 'Producto A', 'quantity' => $quantityA = rand(1, 10), 'price' => $priceA = rand(100, 1000)],
+                ['item' => 'Producto B', 'quantity' => $quantityB = rand(1, 5), 'price' => $priceB = rand(500, 2000)],
+            ];
+
+            // Calcular el total_amount como la suma de los precios de los items
+            $totalAmount = ($quantityA * $priceA) + ($quantityB * $priceB);
+
             DB::table('purchase_requests')->insert([
                 [
-                    'requisition_uid' => 'REQ' . str_pad($i + 1, 5, '0', STR_PAD_LEFT),
+                    'requisition_uid' => $requisitionUid,
                     'title' => 'Requisición ' . ($i + 1),
-                    'total_amount' => rand(1000, 50000),
+                    'total_amount' => $totalAmount,
                     'justification' => ['Compra de materiales', 'Adquisición de equipos', 'Contratación de servicios', 'Reparaciones'][rand(0, 3)],
                     'request_date' => Carbon::now()->subMonths(1)->subDays(rand(0, 30)),
                     'priority' => ['low', 'medium', 'high', 'urgent'][rand(0, 3)],
                     'status' => ['Pending', 'Approved', 'Rejected'][rand(0, 2)],
-                    'items' => json_encode([
-                        ['item' => 'Producto A', 'quantity' => rand(1, 10), 'price' => rand(100, 1000)],
-                        ['item' => 'Producto B', 'quantity' => rand(1, 5), 'price' => rand(500, 2000)],
-                    ]),
+                    'items' => json_encode($items),
                     'rejection_reason' => rand(0, 1) ? null : 'Falta de presupuesto',
                     'user_id' => 1,
-                    'department_id' => rand(1, 4),
-                    'supplier_id' => rand(1, 3),
-                    'client_id' => rand(1, 2),
+                    'department_id' => $departmentId,
                     'reviewed_by' => 1,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
             ]);
         }
+
         // Insertar transacciones financieras
         for ($i = 0; $i < 40; $i++) {
             DB::table('transactions')->insert([
